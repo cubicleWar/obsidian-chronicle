@@ -1,7 +1,7 @@
 import { getExtensionFromUrl } from "utilities/utilities.js";
 import { slugifyFilename } from "utilities/parsing";
 
-export function getPoserLocalPath(title : string, poster: string | null, imagePath: string) : string | null
+export function getPoserLocalPath(title : string, poster: string | null, imagePath: string) : string
 {
 	if(poster && poster !== "N/A")
 	{
@@ -16,5 +16,5 @@ export function getPoserLocalPath(title : string, poster: string | null, imagePa
 		}
 	}
 
-	return null;
+	return "";
 }

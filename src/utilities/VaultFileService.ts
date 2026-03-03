@@ -1,31 +1,158 @@
-import { App, TFile, Vault } from "obsidian";
+import { App, parseYaml, stringifyYaml, TAbstractFile, TFile, Vault } from "obsidian";
+import { downloadBinaryFile } from "./Files";
+
+type FrontmatterPrimitive = string | number | boolean | null;
 
 export class VaultFileService
 {
-	private readonly vault: Vault;
+	constructor(private app: App, private vault: Vault) {}
 
-	constructor(vault: Vault)
+	async readNote(note_reference: string | TFile): Promise<string | null>
 	{
-		this.vault = vault;
-	}
+		const file = this.getTFile(note_reference);
 
-	async loadNote(path: string): Promise<string | null>
-	{
-		const file = this.vault.getAbstractFileByPath(path);
-
-		if (!(file instanceof TFile) || file.extension !== "md")
+		if(file !== null)
 		{
-			return null;
+			return await this.vault.read(file);
 		}
-
-		return await this.vault.read(file);
+		else
+		{
+			return null
+		}
 	}
 
 	async writeNote(path: string, content: string, overwrite: boolean = false)
 	{
 		this.vault.create(path, content);
 	}
+
+	async addFileFromUrl(url: string, output_path: string, overwrite: boolean = false) : Promise<boolean>
+	{
+		const trimmedUrl = url.trim();
+
+		if (!trimmedUrl)
+		{
+			console.log("addFileFromUrl: url is empty")
+			return false;
+		}
+
+		this.ensureParentFolders(output_path);
+
+		const data = await downloadBinaryFile(url);
+
+		const file = this.getTFile(output_path);
+
+		if(file !== null)
+		{
+			if(overwrite)
+			{
+				await this.vault.modifyBinary(file, data);
+			}
+		}
+		else
+		{
+			await this.vault.createBinary(output_path, data);
+		}
+
+		return true;
+	}
+
+	getTFile(ref: string | TFile) : TFile | null
+	{
+		if (ref instanceof TFile) return ref;
+
+		const raw = ref.trim();
+
+		if (!raw)
+		{
+			return null;
+		}
+
+		// Vault-relative path; add .md if missing
+		const path = raw.toLowerCase().endsWith(".md") ? raw : `${raw}.md`;
+
+		const af = this.vault.getAbstractFileByPath(path);
+
+		if (!af || !(af instanceof TFile))
+		{
+			return null
+		}
+
+		return af;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
+	//
+	// Atomically updates a frontmatter value
+	//
+	// @param key		- The key of the frontmatter attribute
+	// @param value		- The value to write for the attribute
+	// @param overwrite - Overwrites the current attribute value if it exists
+	// @param forceList - Will result in the attribute value to be an array/list
+	// @param dedupe 	- Will deduplicate an any parameter lists
+	//
+	///////////////////////////////////////////////////////////////////////////////
+	async updateFrontmatterAttribute(
+		file: TFile,
+		key: string,
+		value?: FrontmatterPrimitive | FrontmatterPrimitive[],
+		overwrite: boolean = false,
+		forceList: boolean = false,
+		dedupe: boolean = true
+	): Promise<void>
+	{
+		await this.app.fileManager.processFrontMatter(file, (fm) => {
+			const existing = (fm as any)[key];
+
+			const asArray = (v: any): any[] => {
+				if (Array.isArray(v)) return v;
+				if (v === undefined || v === null) return [];
+
+				return [v];
+			};
+
+			const dedupeArray = (arr: any[]) => (dedupe ? Array.from(new Set(arr)) : arr);
+
+			if (overwrite)
+			{
+				if (value === undefined)
+				{
+					delete (fm as any)[key];
+				}
+				else
+				{
+					(fm as any)[key] = forceList ? asArray(value) : value;
+				}
+			}
+			else
+			{
+				if(Array.isArray(existing) || forceList)
+				{
+					const toAdd = asArray(value);
+					let next = [...asArray(existing), ...toAdd];
+
+					next = dedupe ? dedupeArray(next) : next;
+
+					(fm as any)[key] = next;
+				}
+				else
+				{
+					(fm as any)[key] = existing + " " + value;
+				}
+			}
+
+			return;
+		});
+	}
+
+	private async ensureParentFolders(file_path: string): Promise<void>
+	{
+		const idx = file_path.lastIndexOf("/");
+		const folder_path = idx === -1 ? "" : file_path.slice(0, idx);
+
+		if (!await this.app.vault.adapter.exists(folder_path))
+		{
+			await this.app.vault.createFolder(folder_path);
+		}
+	}
 }
-
-
-

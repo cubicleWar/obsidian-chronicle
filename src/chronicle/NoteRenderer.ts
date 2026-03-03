@@ -29,7 +29,7 @@ export class NoteRenderer<T>
 			}
 			else
 			{
-				const note = await this.file_service.loadNote(this.template_path);
+				const note = await this.file_service.readNote(this.template_path);
 
 				this._template = Handlebars.compile(note, {noEscape: true});
 				NoteRenderer.template_cache.set(this.template_path, this._template);

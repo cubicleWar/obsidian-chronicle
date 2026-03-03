@@ -18,7 +18,7 @@ export interface Movie
 	languages: string[];
 	countries: string[];
 	poster: string | null;
-	poster_local: string | null;
+	poster_local: string;
 	box_office: string | null;
 	plot: string | null;
 }

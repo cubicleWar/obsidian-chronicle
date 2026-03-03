@@ -22,73 +22,19 @@ export class Chronicle extends Plugin
 		console.log("Obsidian Chronicle Loaded");
 		await this.loadSettings();
 
-		this.fileService = new VaultFileService(this.app.vault);
+		this.fileService = new VaultFileService(this.app, this.app.vault);
 		this.mediaService = new MediaDataOrchestrator(this.settingsService);
 
 		this.addCommand({
 			id: "chronicle-movie-search",
 			name: "Chronicle Movie",
-			callback: this.addOrUpdateMovie
+			callback: async () => this.addOrUpdateMovie()
 		});
 
-
-
 		this.addCommand({
-			id: "omdb-search",
-			name: "Chronicle media",
-			callback: async () => {
-				const modal = new MediaSearchModal(this.app, this.mediaService);
-
-				const picked = await modal.openAndGetChoice();
-
-				if(picked && picked.item !== null)
-				{
-					const type = picked.type;
-
-					if(type === 'movie')
-					{
-
-
-						const movie = await this.mediaService.getMovie(picked.item);
-
-						if(movie)
-						{
-							const template_path = this.settingsService.getSetting('movie_template_path')
-							const movie_path = this.settingsService.getSetting('movie_output_path');
-
-							const render = new NoteRenderer<Movie>(this.fileService, template_path)
-
-							const note = await render.render(movie);
-
-							const path = `${movie_path}/${movie.title} (${movie.year}).md`;
-
-							this.fileService.writeNote(path, note)
-
-
-							new Notice(`Picked: ${movie.title} (${movie.year}) - ${movie.plot}`);
-						}
-					}
-					else if(type === 'series')
-					{
-
-						// Get the season in detail
-						const series = await this.mediaService.getSeries(picked.item)
-
-						if(series !== null)
-						{
-							// Show a secondary model to select the second
-							const modal = new SeriesSeasonSelectModal(this.app, this.mediaService, series);
-							const season = await modal.openAndGetChoice();
-
-							console.log(season);
-						}
-					}
-				}
-
-				// Then: fetch details by imdbID if you need more fields:
-				// https://www.omdbapi.com/?apikey=KEY&i=IMDBID&plot=full
-				return null;
-			}
+			id: "chronicle-series-search",
+			name: "Chronicle TV Series",
+			callback: async () => this.addOrUpdateSeriesSeason()
 		});
 
 		// Add the Settings
@@ -113,28 +59,72 @@ export class Chronicle extends Plugin
 
 				const path = `${movie_path}/${movie.title} (${movie.year}).md`;
 
-				let note = await this.fileService.loadNote(path);
+				const note_reference = this.fileService.getTFile(path);
 
-				if(note === null)
+				if(note_reference === null)
 				{
 					// Note does not exist - create a new note
 					const render = new NoteRenderer<Movie>(this.fileService, template_path)
 
-					note = await render.render(movie);
+					const note = await render.render(movie);
+
+					this.fileService.writeNote(path, note, true)
 				}
 				else
 				{
-					// Note exists - update the note watch add
+					// Note exists - Just update to add a watch date
+
+					await this.fileService.updateFrontmatterAttribute(note_reference, 'watch_dates', '2026-02-27', false, true);
 				}
 
 
-
-
-				this.fileService.writeNote(path, note, true)
-
+				this.savePoster(movie)
 
 				new Notice(`Created New entry: ${movie.title} (${movie.year}) - ${movie.plot}`);
 			}
+		}
+	}
+
+	async addOrUpdateSeriesSeason()
+	{
+		const modal = new MediaSearchModal(this.app, this.mediaService, "series");
+
+		const picked = await modal.openAndGetChoice();
+
+		if(picked && picked.item !== null)
+		{
+			// Get the season in detail
+			const series = await this.mediaService.getSeries(picked.item)
+
+			// Get the season details
+			if(series !== null)
+			{
+				let season_no : number | null = 1;
+
+				if(!series.miniseries)
+				{
+					// Show a secondary model to select the second
+					const modal = new SeriesSeasonSelectModal(this.app, this.mediaService, series);
+					season_no = await modal.openAndGetChoice();
+
+					console.log(season_no);
+				}
+
+
+			}
+
+			// Save the series
+
+
+			// Save the season
+		}
+	}
+
+	async savePoster(media : Movie, overwrite: boolean = true) : Promise<void>
+	{
+		if(this.settings.save_posters_locally && media.poster)
+		{
+			await this.fileService.addFileFromUrl(media.poster, media.poster_local, overwrite)
 		}
 	}
 

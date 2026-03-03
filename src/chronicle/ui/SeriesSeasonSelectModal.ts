@@ -5,8 +5,8 @@ import { SeriesSeasonSummary } from "media/models/SeriesSeason";
 
 export class SeriesSeasonSelectModal extends Modal
 {
-	private resolve!: (value: SeriesSeasonSummary | null) => void;
-	private selected_season: SeriesSeasonSummary | null = null;
+	private resolve!: (value: number | null) => void;
+	private selected_season: number = 1;
 
 	constructor(public app: App, service: MediaDataOrchestrator, private series: Series)
 	{
@@ -37,32 +37,22 @@ export class SeriesSeasonSelectModal extends Modal
 			return;
 		}
 
-		// Dropdown options: label -> value (string)
-		const dropdownOptions: Record<string, string> = {};
-
-		for (const s of seasons)
-		{
-			const label = this.formatSeasonLabel(s);
-			dropdownOptions[label] = String(s.season_number);
-		}
-
 		new Setting(contentEl)
 			.setName("Season")
 			.setDesc("Choose a season to continue.")
 			.addDropdown(dd => {
-				dd.addOptions(dropdownOptions);
+
+				for (const s of seasons)
+				{
+					const label = this.formatSeasonLabel(s);
+					dd.addOption(String(s.season_number), label)
+				}
 
 				// Set default selection
-				//dd.setValue(String(this.selected_season?.season_number));
+				dd.setValue(String(this.selected_season));
 
 				dd.onChange((value) => {
-					const v = Number(value);
-					const season = seasons.find(s => s.season_number == v);
-					console.log(v);
-					console.log(season);
-					console.log(seasons)
-
-					this.selected_season = season ?? null;
+					this.selected_season = Number(value);
 				});
 			});
 
@@ -83,7 +73,7 @@ export class SeriesSeasonSelectModal extends Modal
 		);
 	}
 
-	openAndGetChoice(): Promise<SeriesSeasonSummary | null>
+	openAndGetChoice(): Promise<number | null>
 	{
 		return new Promise((resolve) => {
 			this.resolve = resolve;
@@ -97,11 +87,16 @@ export class SeriesSeasonSelectModal extends Modal
 
 		const parts: string[] = [baseName];
 
-		if (typeof s.episode_count === "number") parts.push(`${s.episode_count} episodes`);
+		if (typeof s.episode_count === "number")
+		{
+			parts.push(`${s.episode_count} episodes`);
+		}
 
-		if (s.air_date) parts.push(s.air_date);
+		if (s.air_date)
+		{
+			parts.push(s.air_date);
+		}
 
 		return parts.join(" — ");
 	}
-
 }
