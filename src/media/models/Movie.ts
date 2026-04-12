@@ -1,6 +1,7 @@
+import { ArtworkOwner } from "./ArtworkOwner";
 
 
-export interface Movie
+export interface Movie extends ArtworkOwner
 {
 	title: string;
 	categories: string[];
@@ -17,8 +18,6 @@ export interface Movie
 	released: string | null;
 	languages: string[];
 	countries: string[];
-	poster: string | null;
-	poster_local: string;
 	box_office: string | null;
-	plot: string | null;
+	overview: string | null;
 }

@@ -1,12 +1,10 @@
-const OMDB_API_KEY = "b2f92342";
-
 import { OmdbSearchResponse } from "./models/OmdbSearchResponse.js"
 import { OmdbSeries } from "./models/OmdbSeries.js";
 import { OmdbSeriesSeason } from "./models/OmdbSeriesSeason.js";
 import { OmdSearchTerms, OmdbSearchRequest } from "./models/OmdbRequest.js";
 import { OmdbMovie } from "./models/OmdbMovie.js";
 import { OmdbSeriesEpisode } from "./models/OmdbSeriesEpisode.js";
-import { parseTitleAndYear } from "../utilities/parsing.js"
+import { parseTitleAndYear } from "../utilities/parseTitleAndYear.js"
 import { OmdbSearchResult } from "./models/OmdbSearchResult.js"
 
 export class OmdbClient
@@ -59,38 +57,36 @@ export class OmdbClient
 		return data ?? null;
 	}
 
-	async getSeriesSeason(series: OmdbSeries, season_no: number | string)  : Promise<OmdbSeriesSeason | null>
+	async getSeriesSeason(series_id: string, season_no: number)  : Promise<OmdbSeriesSeason | null>
 	{
-		if(series && series?.imdbID !== undefined)
-		{
-			let season: OmdbSeriesSeason = await this.request({i: series.imdbID, type: "series", "season": season_no})
+		let season: OmdbSeriesSeason = await this.request({i: series_id, type: "series", "season": season_no})
 
-			if(season !== null)
-			{
-				return season;
-			}
+		if(season !== null)
+		{
+			// Todo: Enrich the epsiode data
+			season = await this.enrichEpisodes(season)
+			console.log("OMDB season")
+			console.log(season)
+
+			return season;
 		}
 
 		return null
 	}
 
-	async enrichEpisodes(season: OmdbSeriesSeason) : Promise<OmdbSeriesSeason | null>
+	async enrichEpisodes(season: OmdbSeriesSeason) : Promise<OmdbSeriesSeason>
 	{
-		if(!season)
+		if(season.hasOwnProperty('Episodes'))
 		{
-			return null;
+			const episode_fetch : Promise<OmdbSeriesEpisode>[]  = [];
+
+			for(let episode of season.Episodes)
+			{
+				episode_fetch.push(this.request({i: episode.imdbID}))
+			}
+
+			season.Episodes = await Promise.all(episode_fetch)
 		}
-
-		const episodes = [];
-
-		for(let episode of season.Episodes)
-		{
-			let ep : OmdbSeriesEpisode = await this.request({i: episode.imdbID});
-
-			episodes.push(ep);
-		}
-
-		season.Episodes = episodes;
 
 		return season;
 	}

@@ -19,3 +19,12 @@ export async function downloadBinaryFile(url: string) : Promise<ArrayBuffer>
 
 	return resp.arrayBuffer;
 }
+
+export function getExtensionFromUrl(url: string) : string | null
+{
+	const pathname = new URL(url).pathname;
+	const filename = pathname.substring(pathname.lastIndexOf('/') + 1);
+	const dotIndex = filename.lastIndexOf('.');
+
+	return dotIndex !== -1 ? filename.substring(dotIndex + 1).toLowerCase() : null;
+}

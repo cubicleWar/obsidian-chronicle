@@ -15,8 +15,11 @@
 	},
 	"dependencies": {
 		"@popperjs/core": "^2.11.8",
+		"date-fns": "^4.1.0",
 		"handlebars": "^4.7.8",
-		"obsidian": "^1.11.4"
+		"markdown-table": "^3.0.4",
+		"obsidian": "^1.11.4",
+		"radash": "^12.1.1"
 	},
 	"scripts": {
 		"typecheck": "tsc -p tsconfig.json --noEmit",

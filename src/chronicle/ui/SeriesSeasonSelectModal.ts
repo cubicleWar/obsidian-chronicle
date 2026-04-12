@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
-import { MediaDataOrchestrator } from "chronicle/MediaDataOrchestrator";
+import { MediaDataOrchestrator } from "../MediaDataOrchestrator";
 import { Series } from "media/models/Series.js"
 import { SeriesSeasonSummary } from "media/models/SeriesSeason";
 

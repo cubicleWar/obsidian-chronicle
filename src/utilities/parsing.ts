@@ -1,41 +1,8 @@
 
 
-export function slugifyFilename(filename: string, spacer: string = " ") : string
-{
-	// Obsidian is fine with many characters, but keep filenames safe across OSes.
-	return filename
-			.trim()
-			.replace(/[\/\\:*?"<>|]/g, "")		// Windows-illegal
-			.replace(/\s+/g, spacer)
-			.replace(/\.$/, "") 				// no trailing dot on Windows
-			.slice(0, 180);
-}
 
-// Parses titles and years for title strings when format is like "Die Hard (1998)"
-export function parseTitleAndYear(rawTitle: string) : {title: string, year: (number | null)}
-{
-	const s = String(rawTitle).trim();
 
-	let val : { title : string, year: (number | null) } = {
-		title: s,
-		year: null
-	};
 
-	// Match "Title (1999)" at end of string
-	const m = s.match(/^(.*?)(?:\s*\(?((?:18|19|20)\d{2})\)?)$/);
-
-	if (m)
-	{
-		val.title = m[1] ? m[1].trim() : '';
-		val.year = Number(m[2]);
-	}
-	else
-	{
-		val.title = s;
-	}
-
-	return val;
-}
 
 //
 // Date and Time processing functions
@@ -135,19 +102,4 @@ export function normalizeTimeToMinutes(runLengthRaw: string) : (number | null)
 	return null; // fallback: preserve as string if unknown
 }
 
-export function mergeUniqueSortedDates(existingDates: string[], incomingDates: string[]) : string[]
-{
-	const set = new Set<string>();
 
-	for (const d of existingDates || [])
-	{
-		if (d) set.add(d);
-	}
-
-	for (const d of incomingDates || [])
-	{
-		if (d) set.add(d);
-	}
-
-	return Array.from(set).sort();
-}

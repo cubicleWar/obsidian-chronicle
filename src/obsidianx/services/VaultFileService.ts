@@ -1,11 +1,16 @@
-import { App, parseYaml, stringifyYaml, TAbstractFile, TFile, Vault } from "obsidian";
-import { downloadBinaryFile } from "./Files";
+import { App, TFile, Vault } from "obsidian";
+import { downloadBinaryFile } from "utilities/files.js";
 
 type FrontmatterPrimitive = string | number | boolean | null;
 
 export class VaultFileService
 {
 	constructor(private app: App, private vault: Vault) {}
+
+	async openNote(note: TFile)
+	{
+		this.app.workspace.getLeaf(true).openFile(note);
+	}
 
 	async readNote(note_reference: string | TFile): Promise<string | null>
 	{
@@ -21,40 +26,40 @@ export class VaultFileService
 		}
 	}
 
-	async writeNote(path: string, content: string, overwrite: boolean = false)
+	async writeNote(path: string, content: string, overwrite: boolean = false) : Promise<TFile>
 	{
-		this.vault.create(path, content);
+		return this.vault.create(path, content);
 	}
 
-	async addFileFromUrl(url: string, output_path: string, overwrite: boolean = false) : Promise<boolean>
+	async writeBinary(path: string, data: ArrayBuffer, overwrite: boolean = false)
+	{
+		const file = this.getTFile(path);
+
+		if(file === null)
+		{
+			return this.vault.createBinary(path, data);
+		}
+		else if(file !== null && overwrite)
+		{
+			return this.vault.modifyBinary(file, data);
+		}
+	}
+
+	async addFileFromUrl(url: string, output_path: string, overwrite: boolean = false) : Promise<TFile | void>
 	{
 		const trimmedUrl = url.trim();
 
 		if (!trimmedUrl)
 		{
 			console.log("addFileFromUrl: url is empty")
-			return false;
+			return;
 		}
 
 		this.ensureParentFolders(output_path);
 
 		const data = await downloadBinaryFile(url);
 
-		const file = this.getTFile(output_path);
-
-		if(file !== null)
-		{
-			if(overwrite)
-			{
-				await this.vault.modifyBinary(file, data);
-			}
-		}
-		else
-		{
-			await this.vault.createBinary(output_path, data);
-		}
-
-		return true;
+		return this.writeBinary(output_path, data, overwrite)
 	}
 
 	getTFile(ref: string | TFile) : TFile | null

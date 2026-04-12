@@ -1,36 +1,52 @@
 import { OmdbClient } from "omdb/OmdbClient.js";
 import { MediaType } from "../media/models/MediaType.js";
-import { ApiClient } from "../media/models/ApiClient.js";
 import { SearchResult } from "../media/models/SearchResult.js";
 import * as OmdbNormalizer from "media/services/OmdbNormalizer.js";
 import * as TmdbNormalizer from "media/services/TmdbNormalizer.js"
 import { Movie } from "media/models/Movie.js";
 import { Series } from "media/models/Series.js";
+import { Miniseries } from "media/models/Miniseries.js";
 import { ChronicleSettings } from "./settings/ChronicleSettings.js";
-import { SettingsService } from "utilities/Settings.service.js";
-import { EventRef, NullValue } from "obsidian";
+import { SettingsService } from "obsidianx/services/Settings.service.js";
+import { EventRef } from "obsidian";
 import { TmdbClient } from "tmdb/TmdbClient.js";
-import { MediaNormalizer } from "media/models/MediaNormalizer.js";
-import { coalesce } from "utilities/utilities.js";
+import { SeriesSeason } from "media/models/SeriesSeason.js";
+import { mergeModelData } from "utilities/utilities.js";
 
-type ClientSet = { source: string, client: ApiClient, normalizer: MediaNormalizer}
+type ClientSet = {
+	id_name: "imdb_id" | "tmdb_id",
+	search: {
+		get: (search_str: string, type: MediaType) => any,
+		normalize: (data: any) => SearchResult[]
+	}
+	movie: {
+		get: (id: string) => any,
+		normalize: (data: any, artwork: string) => Movie
+	},
+	series: {
+		get: (id: string) => any,
+		normalize: (data: any, artwork: string) => Series
+	}
+	season: {
+		get: (id: string, season: number) => any
+		normalize: (series: Series, data: any) => SeriesSeason
+	}
+}
 
 export class MediaDataOrchestrator
 {
 	public readonly id_name = 'id';
-	private omdb_token: string;
-	private tmdb_token: string;
-	private omdb: OmdbClient | null;
-	private tmdb: TmdbClient | null;
+	private omdb_token: string | null = null;
+	private tmdb_token: string | null = null;
+	private omdb: OmdbClient | null = null;
+	private tmdb: TmdbClient | null = null;
 
-	private settingsService: SettingsService<ChronicleSettings>;
 	private settingsEvt: EventRef;
 
-	private poster_path: string;
+	private artwork_path: string = "";
 
-	constructor(settingsService: SettingsService<ChronicleSettings>)
+	constructor(private settingsService: SettingsService<ChronicleSettings>)
 	{
-		this.settingsService = settingsService;
 		this.settingsEvt = this.settingsService.onChanged(() => this.updateSettings());
 
 		this.updateSettings();
@@ -44,14 +60,40 @@ export class MediaDataOrchestrator
 		{
 			const set = <ClientSet>sets[0];
 
-			const results = await set.client.search(search_str, type);
+			const results = await set.search.get(search_str, type);
 
-			return set.normalizer.getSearchResults(results);
+			return set.search.normalize(results);
 		}
 
 		return [];
 	}
 
+	async get(type: "movie", item: SearchResult): Promise<Movie | null>;
+	async get(type: "series", item: SearchResult): Promise<Series | null>;
+	async get(type: "movie" | "series", item: SearchResult) : Promise<Movie | Series | null>
+	{
+		const clients : ClientSet[] = this.getClients(type);
+		let results = [];
+
+		for(const clientSet of clients)
+		{
+			const id = <string | null>item[clientSet.id_name];
+
+			// Todo fallback when tmdb_id is not present?
+			if(id)
+			{
+				const result = await clientSet[type].get(id)
+
+				if(result !== null)
+				{
+					results.push(clientSet[type].normalize(result, this.artwork_path));
+				}
+			}
+		}
+
+		return mergeModelData<any>(...results);
+	}
+/*
 	async getMovie(item: SearchResult) : Promise<Movie | null>
 	{
 		const clients = this.getClients("movie");
@@ -63,27 +105,19 @@ export class MediaDataOrchestrator
 
 			const id = item[client.ID_NAME]
 
+			// Todo fallback when tmdb_id is not present?
 			if(id !== null)
 			{
 				const result = await client.getMovie(id)
 
 				if(result !== null)
 				{
-					results.push(normalizer.getMovie(result, this.poster_path));
+					results.push(normalizer.getMovie(result, this.artwork_path));
 				}
 			}
 		}
 
-		// Enrich by merging data from each API
-		if(results.length === 0)
-		{
-			return null;
-		}
-		else
-		{
-			// Return the first one for now - Todo merge results
-			return <Movie>results[0];
-		}
+		return mergeModelData<Movie>(...results);
 	}
 
 	async getSeries(item: SearchResult) : Promise<Series | null>
@@ -103,19 +137,77 @@ export class MediaDataOrchestrator
 
 				if(result !== null)
 				{
-					results.push(normalizer.getSeries(result, this.poster_path));
+					results.push(normalizer.getSeries(result, this.artwork_path));
 				}
 			}
 		}
 
-		return results[0] ?? null;
-	}
-/*
-	async getSeriesSeason(series: Series, season: number) : Promise<SeriesSeason | null>
-	{
-
+		return mergeModelData<Series>(...results);
 	}
 */
+	async getSeriesSeason(series: Series, season_no: number) : Promise<SeriesSeason | null>
+	{
+		const clients = this.getClients("series");
+		let results : SeriesSeason[] = [];
+
+		for(const clientSet of clients)
+		{
+			const id = <string | null>series[clientSet.id_name];
+
+			// Todo fallback when tmdb_id is not present?
+			if(id)
+			{
+				const result = await clientSet["season"].get(id, season_no)
+
+				if(result !== null)
+				{
+					results.push(clientSet["season"].normalize(series, result));
+				}
+			}
+		}
+
+		return mergeModelData<any>(...results);
+	}
+
+	// Merges together series and season data to form a Miniseries
+	generateMiniseries(series: Series, season: SeriesSeason) : Miniseries
+	{
+		const miniseries : Miniseries = {
+			title: series.title,
+			imdb_id: season.imdb_id,
+			tmdb_id: season.tmdb_id,
+			series_tmdb_id: season.series_tmdb_id,
+			series_imdb_id: season.series_imdb_id,
+			season_number: season.season_number,
+			miniseries: series.miniseries,
+			categories: series.categories,
+			genres: series.genres,
+			cast: season.cast,
+			year: season.released ? Number(season.released.slice(0, 4)) : null,
+			released: season.released,
+			status: series.status,
+			countries: series.countries,
+			languages: series.languages,
+			created_by: series.created_by,
+			overview: season.overview,
+			artwork: series.artwork,
+			artwork_local: series.artwork_local,
+			rating: season.rating,
+			networks: season.networks,
+			runtime: season.runtime,
+			average_runtime: season.average_runtime,
+			number_of_episodes: season.number_of_episodes,
+			episodes: season.episodes,
+			episode_table: season.episode_table
+		}
+
+		return miniseries;
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Utility Functions
+	////////////////////////////////////////////////////////////////////////////////
+
 	private updateSettings()
 	{
 		// Update the API Clients
@@ -135,7 +227,7 @@ export class MediaDataOrchestrator
 		}
 
 		// Update other settings
-		this.poster_path = this.settingsService.getSetting("poster_output_path");
+		this.artwork_path = this.settingsService.getSetting("artwork_output_path");
 	}
 
 	// Returns an array of Client Sets (ApiClients and their associated normalizers)
@@ -143,8 +235,58 @@ export class MediaDataOrchestrator
 	// The clients are ordered by the best for the associated media type
 	private getClients(type: MediaType) : ClientSet[]
 	{
-		const omdbSet : (ClientSet | null) = this.omdb !== null ? { source: "omdb", client: this.omdb, normalizer: OmdbNormalizer } : null,
-			tmdbSet : (ClientSet | null)  = this.tmdb !== null ? { source: "tmdb", client: this.tmdb, normalizer: TmdbNormalizer } : null;
+		let omdbSet: ClientSet | null = null,
+			tmdbSet: ClientSet | null = null;
+
+		const omdb = this.omdb;
+
+		if(omdb !== null)
+		{
+			omdbSet = {
+				id_name: "imdb_id",
+				search: {
+					get: omdb.search.bind(omdb),
+					normalize: OmdbNormalizer.getSearchResults
+				},
+				movie: {
+					get: omdb.getMovie.bind(omdb),
+					normalize: OmdbNormalizer.getMovie
+				},
+				series: {
+					get: omdb.getSeries.bind(omdb),
+					normalize: OmdbNormalizer.getSeries
+				},
+				season: {
+					get: omdb.getSeriesSeason.bind(omdb),
+					normalize: OmdbNormalizer.getSeriesSeason
+				}
+			}
+		}
+
+		const tmdb = this.tmdb;
+
+		if(tmdb !== null)
+		{
+			tmdbSet = {
+				id_name: "tmdb_id",
+				search: {
+					get: tmdb.search.bind(tmdb),
+					normalize: TmdbNormalizer.getSearchResults
+				},
+				movie: {
+					get: tmdb.getMovie.bind(tmdb),
+					normalize: TmdbNormalizer.getMovie
+				},
+				series: {
+					get: tmdb.getSeries.bind(tmdb),
+					normalize: TmdbNormalizer.getSeries
+				},
+				season: {
+					get: tmdb.getSeriesSeason.bind(tmdb),
+					normalize: TmdbNormalizer.getSeriesSeason
+				}
+			}
+		}
 
 		let sets = [];
 

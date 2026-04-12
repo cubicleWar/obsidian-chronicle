@@ -2,7 +2,7 @@ import { App, Modal, Notice, Setting, TextComponent } from "obsidian";
 import { MediaDataOrchestrator } from "../MediaDataOrchestrator.js";
 import { SearchResult } from "media/models/SearchResult.js";
 import { MediaType } from "media/models/MediaType.js";
-import { UserMediaSelection } from "chronicle/models/UserMediaSelection.js";
+import { UserMediaSelection } from "../models/UserMediaSelection.js";
 
 
 
@@ -26,8 +26,6 @@ export class MediaSearchModal extends Modal
 
 	private debounceTimer: number | null = null;
 	private requestSeq = 0;
-
-	private readonly maxResultsToShow: number;
 
 	constructor(app: App, private service: MediaDataOrchestrator, private mode: MediaType = "movie")
 	{
@@ -160,15 +158,16 @@ export class MediaSearchModal extends Modal
 			if (seq !== this.requestSeq) return; // stale
 
 			this.setStatus("Search failed.");
-			// Keep the UI calm; optionally surface detail for debugging
-			// new Notice(e?.message ?? "Search failed");
-			console.error("OMDb search error:", e);
+			console.error("Obsidian Chronicle - Media search error:", e);
 		}
 	}
 
 	private setStatus(text: string)
 	{
-		if (!this.statusEl) return;
+		if (!this.statusEl)
+		{
+			return;
+		}
 
 		this.statusEl.empty();
 		this.statusEl.createDiv({ text });
@@ -181,7 +180,11 @@ export class MediaSearchModal extends Modal
 
 	private renderResults(results: SearchResult[])
 	{
-		if (!this.resultsEl) return;
+		if (!this.resultsEl)
+		{
+			return;
+		}
+
 		this.resultsEl.empty();
 
 		for (const r of results)
@@ -191,15 +194,19 @@ export class MediaSearchModal extends Modal
 			row.setAttr("tabindex", "0");
 			row.setAttr("aria-label", `${r.title} (${r.year})`);
 
-			if (r.poster)
+			if (r.artwork)
 			{
 				const posterWrap = row.createDiv({ cls: "chronicle-result-poster" });
-				posterWrap.createEl("img", { attr: { src: r.poster, alt: "" } });
+				posterWrap.createEl("img", { attr: { src: r.artwork, alt: "" } });
 			}
 
 			// middle (text)
 			const info = row.createDiv({ cls: "chronicle-result-info" });
-			info.createDiv({ cls: "chronicle-result-title", text: r.title });
+
+			info.createDiv({
+				cls: "chronicle-result-title",
+				text: r.title
+			});
 			info.createDiv({
 				cls: "chronicle-result-meta",
 				text: `${r.year}${r.type ? ` • ${r.type}` : ""}`

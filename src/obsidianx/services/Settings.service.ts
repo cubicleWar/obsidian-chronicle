@@ -31,7 +31,7 @@ export class SettingsService<T>
 
 	onChanged(cb: (s: Readonly<T>) => void): EventRef
 	{
-		return this.events.on("changed", cb);
+		return this.events.on("changed", (value: unknown) => cb(value as Readonly<T>));
 	}
 
 	off(ref: EventRef)

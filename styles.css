@@ -34,3 +34,28 @@
 	color: var(--text-muted);
 	font-size: 12px;
 }
+/* Settings*/
+.stacked-setting {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.stacked-setting .setting-item-info {
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.stacked-setting-field {
+	width: 100%;
+}
+
+.stacked-search-wrapper {
+	width: 100%;
+}
+
+.stacked-search-wrapper input {
+	width: 100%;
+	box-sizing: border-box;
+	font-family: var(--font-monospace);
+}

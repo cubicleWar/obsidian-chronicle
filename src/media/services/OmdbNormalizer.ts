@@ -1,17 +1,23 @@
+import { parse, format } from "date-fns";
+
 import { Movie } from "../models/Movie";
 import { SearchResult } from "../models/SearchResult";
-
-import { OmdbSeries } from "omdb/models/OmdbSeries";
-import { OmdbSeriesSeason } from "omdb/models/OmdbSeriesSeason";
-import { OmdbSeriesEpisode } from "omdb/models/OmdbSeriesEpisode";
-import { OmdbSearchResult } from "omdb/models/OmdbSearchResult";
-
-import { toIntOrNull, safeArraySplit, getExtensionFromUrl, toIntOrY } from "utilities/utilities.js";
-import { slugifyFilename } from "utilities/parsing";
-import { OmdbMovie } from "omdb/models/OmdbMovie";
-import { Series } from "media/models/Series";
+import { Series } from "../models/Series";
 import { ProductionStatus } from "../models/ProductionStatus.js"
-import { getPoserLocalPath } from "../utilities/posterPath";
+import { getArtworkLocalPath } from "../utilities/artworkPath";
+import { SeriesSeason } from "../models/SeriesSeason";
+import { SeriesEpisode } from "../models/SeriesEpisode";
+
+import { OmdbMovie } from "omdb/models/OmdbMovie.js"
+import { OmdbSeries } from "omdb/models/OmdbSeries.js";
+import { OmdbSeriesSeason } from "omdb/models/OmdbSeriesSeason.js";
+import { OmdbSeriesEpisode } from "omdb/models/OmdbSeriesEpisode.js";
+import { OmdbSearchResult } from "omdb/models/OmdbSearchResult.js";
+
+import { toIntOrNull, safeArraySplit, toIntOrY } from "utilities/utilities.js";
+import { runtimeStatistics } from "../utilities/runtimeStatistics.js";
+import { generateEpisodeTable } from "../utilities/generateEpisodeTable";
+
 
 export function getSearchResults(data: OmdbSearchResult[]) : SearchResult[]
 {
@@ -21,7 +27,7 @@ export function getSearchResults(data: OmdbSearchResult[]) : SearchResult[]
 		type: (r.Type ?? "movie"),
 		imdb_id: String(r.imdbID ?? ""),
 		tmdb_id: null,
-		poster: r.Poster && r.Poster !== "N/A" ? String(r.Poster) : null
+		artwork: r.Poster && r.Poster !== "N/A" ? String(r.Poster) : null
 	}));
 }
 
@@ -36,8 +42,8 @@ export function getMovie(data: OmdbMovie, image_path: string) : Movie
 	const full_title = `${data.Title} (${year})`;
 
 	return {
-		title: data.Title,
-		categories: ["[[Movies]]"],
+		title: `\"${data.Title}\"`,
+		categories: ["\"[[Movies]]\""],
 		genres: safeArraySplit(data.Genre),
 		director: data.Director && data.Director !== "N/A" ? data.Director : null,
 		cast: safeArraySplit(data.Actors),
@@ -48,13 +54,13 @@ export function getMovie(data: OmdbMovie, image_path: string) : Movie
 		imdb_id: data.imdbID,
 		tmdb_id: null,
 		rated: data.Rated && data.Rated !== "N/A" ? data.Rated : null,
-		released: data.Released && data.Released !== "N/A" ? data.Released : null,
+		released: getReleasedDateAsIso(data.Released),
 		languages: safeArraySplit(data.Language),
 		countries: safeArraySplit(data.Country),
-		poster: data.Poster && data.Poster !== "N/A" ? data.Poster : null,
-		poster_local: getPoserLocalPath(full_title, data.Poster, image_path),
+		artwork: data.Poster && data.Poster !== "N/A" ? data.Poster : null,
+		artwork_local: getArtworkLocalPath(full_title, data.Poster, image_path),
 		box_office: data.BoxOffice && data.BoxOffice !== "N/A" ? data.BoxOffice : null,
-		plot: data.Plot && data.Plot !== "N/A" ? data.Plot : null
+		overview: data.Plot && data.Plot !== "N/A" ? data.Plot : null
 	};
 }
 
@@ -64,10 +70,10 @@ export function getMovie(data: OmdbMovie, image_path: string) : Movie
 
 export function getSeries(data: OmdbSeries, image_path: string) : Series
 {
-	let categories  = ["[[TV Series]]"];
+	let categories  = ["\"[[TV Series]]\""];
 
 	return {
-		title: data.Title,
+		title: `\"${data.Title}\"`,
 		categories: categories,
 		miniseries: isMiniseries(data),
 		genres: safeArraySplit(data.Genre),
@@ -77,14 +83,14 @@ export function getSeries(data: OmdbSeries, image_path: string) : Series
 		imdb_id: data.imdbID || null,
 		tmdb_id: null,
 		rated: data.Rated && data.Rated !== "N/A" ? data.Rated : null,
-		released: data.Released && data.Released !== "N/A" ? data.Released : null,
+		released: getReleasedDateAsIso(data.Released),
 		languages: data.Language && data.Language !== "N/A" ? safeArraySplit(data.Language) : [],
 		countries: data.Country && data.Country !== "N/A" ? safeArraySplit(data.Country) : [],
-		poster: data.Poster && data.Poster !== "N/A" ? data.Poster : null,
-		poster_local: getPoserLocalPath(data.Title, data.Poster, image_path),
+		artwork: data.Poster && data.Poster !== "N/A" ? data.Poster : null,
+		artwork_local: getArtworkLocalPath(data.Title, data.Poster, image_path),
 		number_of_seasons: toIntOrY(data.totalSeasons, 1),
 		number_of_episodes: null,
-		plot: data.Plot && data.Plot !== "N/A" ? data.Plot : null,
+		overview: data.Plot && data.Plot !== "N/A" ? data.Plot : null,
 		status: getSeriesProductionStatus(data),
 		// Items not available on the OMDB API
 		created_by: [],
@@ -93,30 +99,46 @@ export function getSeries(data: OmdbSeries, image_path: string) : Series
 	};
 }
 
-export function getSeason(series: OmdbSeries, data: OmdbSeriesSeason)
+export function getSeriesSeason(series: Series, data: OmdbSeriesSeason) : SeriesSeason
 {
+	const episodes = data.Episodes.map(e => getSeriesEpisode(data, e))
+
+	const stats = runtimeStatistics(episodes, "runtime")
+
 	return {
-		title: series.Title,
-		categories: ["[[TV Series]]", "Series Season"],
-		series: "[[References/Media/Series/"+ slugifyFilename(series.Title) + "]]",
-		season: data.Season ? toIntOrNull(data.Season) : null,
-		episode_count: data.Episodes.length,
-		episodes: data.Episodes
+		title: "Season " + data.Season,
+		imdb_id: "",
+		tmdb_id: null,
+		series_title: series.title,
+		series_imdb_id: series.imdb_id,
+		series_tmdb_id: series.tmdb_id,
+		season_number: toIntOrNull(data.Season),
+		name: "Season " + data.Season,
+		overview: "",
+		released: "",
+		rating: 0,	// Make this an aggregate of the episode ratings
+		cast: series.cast,
+		networks: [],
+		number_of_episodes: episodes.length,
+		episodes: episodes,
+		runtime: stats.total_runtime,
+		average_runtime: stats.average_runtime,
+		episode_table: generateEpisodeTable(episodes)
 	}
 }
 
-export function getEpisode(data: OmdbSeriesEpisode)
+export function getSeriesEpisode(season: OmdbSeriesSeason, data: Partial<OmdbSeriesEpisode>) : SeriesEpisode
 {
 	return {
-		imdb_id: data.imdbID || null,
-		title: data.Title || null,
-		year: data.Year ? toIntOrNull(String(data.Year).slice(0, 4)) : null, // sometimes "2014–"
-		episode: data.Episode ? toIntOrNull(data.Episode) : null,
-		plot: data.Plot && data.Plot !== "N/A" ? data.Plot : null,
+		imdb_id: data.imdbID ?? null,
+		tmdb_id: null,
+		title: `\"${data.Title}\"`,
+		season_number: toIntOrNull(season.Season),
+		episode_number: toIntOrNull(data.Episode),
+		overview: data.Plot && data.Plot !== "N/A" ? data.Plot : "",
 		rating: data.imdbRating && data.imdbRating !== "N/A" ? Number(data.imdbRating) : null,
-		runtime: parseRuntimeToMinutes(data.Runtime),
-		released: data.Released && data.Released !== "N/A" ? data.Released : null,
-		rated: data.Rated && data.Rated !== "N/A" ? data.Rated : null
+		runtime: data.Runtime ? parseRuntimeToMinutes(data.Runtime) : null,
+		released: getReleasedDateAsIso(data.Released),
 	};
 }
 
@@ -125,6 +147,21 @@ export function getEpisode(data: OmdbSeriesEpisode)
 // Utility functions
 //////////////////////////////////////////////////////
 
+function getReleasedDateAsIso(input?: string) : string | null
+{
+	if(input && input !== "N/A")
+	{
+		return toIsoDate(input)
+	}
+
+	return null
+}
+
+function toIsoDate(input: string) : string
+{
+	const parsed = parse(input, "d MMM yyyy", new Date());
+	return format(parsed, "yyyy-MM-dd");
+}
 
 function isMiniseries(data: OmdbSeries) : boolean
 {

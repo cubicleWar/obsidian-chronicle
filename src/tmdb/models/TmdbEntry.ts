@@ -3,8 +3,10 @@ import { TmdbGenre } from "./TmdbGenre.js";
 import { TmdbLanguage } from "./TmdbLanguage.js";
 import { TmdbCompany } from "./TmdbCompany.js"
 import { TmdbCountry } from "./TmdbCountry.js";
+import { hasExternalIds } from "./hasExternalIds.js";
+import { hasCredits } from "./hasCredits.js";
 
-export interface TmdbEntry
+export interface TmdbEntry extends hasExternalIds, hasCredits
 {
 	id: number;
 	adult: boolean;

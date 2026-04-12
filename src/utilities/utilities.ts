@@ -1,5 +1,4 @@
-import { assertNonNull } from "./guards/NonNull";
-
+import { unique } from 'radash'
 
 /** -----------------------
  *  Small utilities
@@ -16,11 +15,6 @@ export function toIntOrY(x: any, y: any)
 	return Number.isFinite(n) ? n : y;
 }
 
-export function isValidNumber(value: any)
-{
-	return typeof value === 'number' && Number.isFinite(value);
-}
-
 export function safeArraySplit(s: string)
 {
 	if (!s || s === "N/A")
@@ -31,58 +25,102 @@ export function safeArraySplit(s: string)
 	return String(s).split(",").map(x => x.trim()).filter(Boolean);
 }
 
-export function coalesce<T>(a: T | null | undefined, b: T | null | undefined): NonNullable<T>
+
+// Merging functions
+
+type AnyObject = Record<string, any>;
+
+
+// Merge two models e.g. movie data sourced from two different API's
+// Model 'a' is preferred over model
+export function mergeModelData<T>(...models: T[]): T
 {
+	if(mergeObjects.length === 0)
+	{
+		throw new Error("mergeModelData requires at least one argument");
+	}
 
-	const result = a ?? b;
+	return models.reduce((acc, obj) => mergeInternal(acc, obj)) as T;
+}
 
-	assertNonNull(result);
+function mergeInternal(a: any, b: any): any
+{
+	// If A is valid, use it unless we need to recurse
+	if (isValid(a))
+	{
+		// Objects → deep merge
+		if (isPlainObject(a) && isPlainObject(b))
+		{
+			return mergeObjects(a, b);
+		}
+
+		// Arrays → combine and dedupe
+		if (Array.isArray(a) && Array.isArray(b))
+		{
+			const combined = [...(a ?? []), ...(b ?? [])];
+
+			return unique(combined,(i: any) => getDedupKey(i));
+		}
+
+		// Primitive → A wins
+		return a;
+	}
+
+	// A invalid → use B (even if B invalid, consistent fallback)
+	return b;
+}
+
+function mergeObjects(a: AnyObject, b: AnyObject): AnyObject
+{
+	const result: AnyObject = {};
+
+	const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+
+	for (const key of keys)
+	{
+		result[key] = mergeInternal(a?.[key], b?.[key]);
+	}
 
 	return result;
 }
 
-export function formatDate(isoDate: string)
+function isValid(value: any): boolean
 {
-	const formatter = new Intl.DateTimeFormat('en-GB', {
-		day: '2-digit',
-		month: 'short',
-		year: 'numeric',
-		timeZone: 'UTC'
-	});
-
-	const [y, m, d] = isoDate.split('-').map(v => Number(v));
-
-	return formatter.format(new Date(Date.UTC(y, m - 1, d)));
+	return value !== null && value !== undefined && value !== "" && value !== "N/A";
 }
 
-export function mergeUnique(a: any, b: any)
+function isPlainObject(value: any): value is Record<string, any>
 {
-	const aIsArray = Array.isArray(a);
-	const bIsArray = Array.isArray(b);
-
-	if(aIsArray && bIsArray)
-	{
-		return [...new Set([...a, ...b])];
-	}
-	else if(aIsArray)
-	{
-		return a;
-	}
-	else if(bIsArray)
-	{
-		return b;
-	}
-	else
-	{
-		return [];
-	}
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function getExtensionFromUrl(url: string) : string | null
+function getDedupKey(value: any): string
 {
-	const pathname = new URL(url).pathname;
-	const filename = pathname.substring(pathname.lastIndexOf('/') + 1);
-	const dotIndex = filename.lastIndexOf('.');
+	// Primitives
+	if (value === null || typeof value !== "object")
+	{
+		return `primitive:${String(value)}`;
+	}
 
-	return dotIndex !== -1 ? filename.substring(dotIndex + 1).toLowerCase() : null;
+	// Fallback: deep stringify (stable-ish)
+	return `obj:${stableStringify(value)}`;
+}
+
+function stableStringify(obj: any): string
+{
+	if (obj === null || typeof obj !== "object")
+	{
+		return JSON.stringify(obj);
+	}
+
+	if (Array.isArray(obj))
+	{
+		return `[${obj.map(stableStringify).join(",")}]`;
+	}
+
+	const keys = Object.keys(obj).sort();
+
+	return `{${keys
+		.map(k => `"${k}":${stableStringify(obj[k])}`)
+		.join(",")}}`;
 }

@@ -7,5 +7,5 @@ export interface SearchResult
 	type: MediaType;
 	imdb_id: string | null;
 	tmdb_id: number | null;
-	poster: string | null;
+	artwork: string | null;
 }

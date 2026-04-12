@@ -1,7 +1,15 @@
-import {App, PluginSettingTab, Setting} from "obsidian";
-import { Chronicle } from "..//Chronicle";
-import { FolderSuggest } from "suggestors/FolderSuggestor";
-import { FileSuggest } from "suggestors/FileSuggestor";
+import { App, PluginSettingTab, Setting, SearchComponent} from "obsidian";
+import { Chronicle } from "../Chronicle";
+import { FolderSuggestor } from "obsidianx/ui/FolderSuggestor.js";
+import { FileSuggestor } from "obsidianx/ui/FileSuggestor.js";
+import { StringKeys } from "utilities/guards/Stringkeys";
+
+// Default templates
+import { MOVIE_TEMPLATE } from "../templates/MovieTemplate.js";
+import { SERIES_TEMPLATE } from "../templates/SeriesTemplate.js";
+import { SERIES_SEASON_TEMPLATE } from "../templates/SeriesSeasonTemplate.js";
+import { MINISERIES_TEMPLATE } from "../templates/MiniSeriesTemplate.js"
+import { ChronicleSettings } from "./ChronicleSettings";
 
 export class ChronicleSettingTab extends PluginSettingTab
 {
@@ -15,60 +23,16 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 	display(): void
 	{
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
 
 		this.displayApiSettings(containerEl);
 		this.displayMovieSettings(containerEl);
 		this.displaySeriesSettings(containerEl);
-		this.displayPosterSettings(containerEl);
-
-
-
-
-
-
-		new Setting(containerEl)
-			.setName('Plot length')
-			.setDesc('choose the plot length option for Omdb.')
-			.addDropdown(dropDown => dropDown
-				.addOption('short', 'short')
-				.addOption('full', 'full')
-				.setValue(this.plugin.settings.plot_length)
-				.onChange(async (value) => {
-					this.plugin.settings.plot_length = value;
-					await this.plugin.saveSettings();
-				}))
-
-		new Setting(containerEl)
-			.setName('Switch to generated notes')
-			.setDesc('Automatically switch to the current workspace to the newly created note')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.switch_to_created_note)
-				.onChange(async (value) => {
-					this.plugin.settings.switch_to_created_note = value;
-					await this.plugin.saveSettings();
-				}));
-
-
-
-
-
-
-
-		new Setting(containerEl)
-			.setName('Create example template file')
-			.setDesc('Creates an example template file to expand and use.\nThe file is called `/Moviegrabber-example-template`')
-			.addButton(btn => btn
-				.setButtonText("Create")
-				.onClick((event) => {
-					//this.plugin.CreateDefaultTemplateFile();
-				}));
-
-
-
-
+		this.displayMiniSeriesSettings(containerEl);
+		this.displayArtworkSettings(containerEl);
+		this.displayGeneralSettings(containerEl);
 	}
 
 	displayApiSettings(containerEl: HTMLElement)
@@ -77,7 +41,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('OMDb API key')
-			.setDesc('Your API key for OMDb')
+			//.setDesc('Your API key for OMDb')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.plugin.settings.omdb_api_key)
@@ -88,7 +52,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('TMDB API key')
-			.setDesc('Your API key for TMDB')
+			//.setDesc('Your API key for TMDB')
 			.addTextArea(text => text
 				.setPlaceholder('')
 				.setValue(this.plugin.settings.tmdb_api_key)
@@ -100,34 +64,11 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 	displayMovieSettings(containerEl: HTMLElement)
 	{
-
 		new Setting(containerEl).setName("Movies").setHeading();
 
-		new Setting(containerEl)
-			.setName('Movie template file path')
-			.setDesc('Path to the template file that is used to create notes for movies')
-			.addSearch((cb) => {
-				new FileSuggest(cb.inputEl, this.plugin.app);
-				cb.setPlaceholder("Example: folder1/folder2")
-					.setValue(this.plugin.settings.movie_template_path)
-					.onChange(async (newFile) => {
-						this.plugin.settings.movie_template_path = newFile;
-						await this.plugin.saveSettings();
-					});
-			});
+		this.createSearchSetting(containerEl, "movie_template_path", "Movie template", "The template used to create notes for movies.", "_templates/Movie Template.md", "file");
 
-		new Setting(containerEl)
-			.setName('Movie Note Folder')
-			.setDesc('Folder in which to save the generated notes for series')
-			.addSearch((cb) => {
-				new FolderSuggest(cb.inputEl, this.plugin.app);
-				cb.setPlaceholder("Example: folder1/folder2")
-					.setValue(this.plugin.settings.movie_output_path)
-					.onChange(async (newFolder) => {
-						this.plugin.settings.movie_output_path = newFolder;
-						await this.plugin.saveSettings();
-					});
-			});
+		this.createSearchSetting(containerEl, "movie_output_path", "Movie notes folder", "Where to save movie notes.", "Media/Movies", "folder")
 
 	}
 
@@ -135,64 +76,130 @@ export class ChronicleSettingTab extends PluginSettingTab
 	{
 		new Setting(containerEl).setName("Series").setHeading();
 
+		this.createSearchSetting(containerEl, "series_template_path", "Series template", "The template used to create notes for series.", "_templates/Series Template.md", "file");
+
+		this.createSearchSetting(containerEl, "series_season_template_path", "Series Season template", "The template used to create notes for series seasons.", "_templates/Series Season Template.md", "file");
+
+		this.createSearchSetting(containerEl, "series_output_path", "Series and Series Season notes location", "Where to save series notes.", "Media/Series", "folder");
+	}
+
+	displayMiniSeriesSettings(containerEl: HTMLElement)
+	{
 		new Setting(containerEl)
-			.setName('Series filename template')
-			.setDesc('Template used for the filename of Movienotes. Used same template tags as other files.')
-			.addText(text => text
-				.setPlaceholder('')
-				.setValue(this.plugin.settings.series_template_path)
+			.setName('Differentiate miniseries')
+			.setDesc('Treats Miniseries as a distinct format from regular Series and Seasons, complete with its own template and note location.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.differentiate_miniseries)
 				.onChange(async (value) => {
-					this.plugin.settings.series_template_path = value;
+					this.plugin.settings.differentiate_miniseries = value;
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl)
-			.setName('Series folder')
-			.setDesc('Folder in which to save the generated notes for series')
-			.addSearch((cb) => {
-				new FolderSuggest(cb.inputEl, this.plugin.app);
-				cb.setPlaceholder("Example: folder1/folder2")
-					.setValue(this.plugin.settings.series_output_path)
-					.onChange(async (newFolder) => {
-						this.plugin.settings.series_output_path = newFolder;
-						await this.plugin.saveSettings();
-					});
-			});
+		this.createSearchSetting(containerEl, "miniseries_template_path", "Miniseries template", "The template used to create notes for Miniseries.", "_templates/Miniseries Template.md", "file");
 
-
-
+		this.createSearchSetting(containerEl, "miniseries_output_path", "Miniseries notes location", "Where to save Miniseries notes.", "Media/Miniseries", "folder");
 	}
 
-	displayPosterSettings(containerEl: HTMLElement)
+	displayArtworkSettings(containerEl: HTMLElement)
 	{
 		new Setting(containerEl).setName("media Posters").setHeading();
 
 		new Setting(containerEl)
-			.setName('Enable poster image saving')
-			.setDesc('Toggle to enable or disable saving movie poster images as files.')
+			.setName('Save media artwork')
+			.setDesc('Save media artwork such as the movie poster to your vault.')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.save_posters_locally)
+				.setValue(this.plugin.settings.save_artwork_locally)
 				.onChange(async value => {
-					this.plugin.settings.save_posters_locally = value;
+					this.plugin.settings.save_artwork_locally = value;
 					await this.plugin.saveSettings();
 					this.display();
 				}),
 			);
 
-		if (this.plugin.settings.save_posters_locally)
+		if (this.plugin.settings.save_artwork_locally)
 		{
-			new Setting(containerEl)
-			.setName('Poster image directory')
-			.setDesc('Specify the path where poster images should be saved.')
-			.addSearch(cb => {
-				new FolderSuggest(cb.inputEl, this.plugin.app);
-				cb.setPlaceholder("Enter the path (e.g., Movies/Posters)")
-					.setValue(this.plugin.settings.poster_output_path)
-					.onChange(async value => {
-						this.plugin.settings.poster_output_path = value.trim();
-						await this.plugin.saveSettings();
-					});
-			});
+			this.createSearchSetting(containerEl, "artwork_output_path", "Media artwork location", "Where to save artwork such as movie posters", "_attachments/artwork", "folder");
 		}
+	}
+
+	displayGeneralSettings(containerEl: HTMLElement)
+	{
+		new Setting(containerEl).setName("General Settings").setHeading();
+
+		new Setting(containerEl)
+			.setName('Switch to generated notes')
+			.setDesc('Automatically open the note for chronicled media.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.switch_to_created_note)
+				.onChange(async (value) => {
+					this.plugin.settings.switch_to_created_note = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Export example template files')
+			.setDesc('Creates example template files for for you to expand and use.')
+			.addButton(btn => btn
+				.setButtonText("Create")
+				.onClick((event) => {
+					this.saveTemplates();
+				}));
+	}
+
+	// Export the example templates
+	private async saveTemplates()
+	{
+		const templates = [
+			MOVIE_TEMPLATE,
+			SERIES_TEMPLATE,
+			SERIES_SEASON_TEMPLATE,
+			MINISERIES_TEMPLATE
+		];
+
+		for (const template of templates)
+		{
+			const file_path = `${template.name}.md`;
+			await this.plugin.fileService.writeNote(file_path, template.content)
+		}
+	}
+
+	// Create a text field setting with search
+	private createSearchSetting(
+		containerEl: HTMLElement,
+		setting_name: StringKeys<ChronicleSettings>,
+		name: string,
+		description: string,
+		placeholder: string = "",
+		suggestor: "file" | "folder" | null = null
+	) {
+		const setting = new Setting(containerEl)
+			.setName(name)
+			.setDesc(description);
+
+		setting.settingEl.addClass("stacked-setting");
+
+		const fieldRow = setting.settingEl.createDiv({ cls: "stacked-setting-field" });
+
+		const search = new SearchComponent(fieldRow);
+
+		search
+			.setPlaceholder(placeholder)
+			.setValue(String(this.plugin.settings[setting_name]))
+			.onChange(async (value) => {
+				this.plugin.settings[setting_name] = value;
+				await this.plugin.saveSettings();
+			});
+
+		if(suggestor === "file")
+		{
+			new FileSuggestor(search.inputEl, this.plugin.app);
+		}
+		else if(suggestor === "folder")
+		{
+			new FolderSuggestor(search.inputEl, this.plugin.app)
+		}
+
+		search.inputEl.addClass("stacked-search-input");
+		search.inputEl.addClass("stacked-search-wrapper");
 	}
 }

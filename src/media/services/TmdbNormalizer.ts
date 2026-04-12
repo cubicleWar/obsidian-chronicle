@@ -1,18 +1,29 @@
-import { TmdbSearchResult, TmdbMovieSearchResult, TmdbSeriesSearchResult } from "tmdb/models/TmdbSearchResult";
-import { SearchResult } from "media/models/SearchResult";
-import { toIntOrNull, safeArraySplit, getExtensionFromUrl, toIntOrY } from "utilities/utilities.js";
+// TMDB Client
+import { TmdbClient } from "tmdb/TmdbClient.js";
+import { TmdbSearchResult } from "tmdb/models/TmdbSearchResult.js";
+import { TmdbMovie } from "tmdb/models/TmdbMovie.js";
+import { TmdbSeries } from "tmdb/models/TmdbSeries.js";
+import { TmdbSeasonSummary, TmdbSeriesSeason } from "tmdb/models/TmdbSeriesSeason.js";
+import { TmdbSeriesEpisode } from "tmdb/models/TmdbSeriesEpisode.js";
+import { TmdbActor } from "tmdb/models/TmdbActor.js";
+import { TmdbCrew } from "tmdb/models/TmdbCrew.js";
+import { isTmdbSeries, isTmdbSeriesSearch } from "tmdb/guards/isTmdbSeries.js";
 import { isTmdbMovie } from "tmdb/guards/isTmdbMovie.js";
-import { isTmdbSeries, isTmdbSeriesSearch } from "tmdb/guards/isTmdbSeries";
-import { TmdbClient } from "tmdb/TmdbClient";
-import { MediaType } from "media/models/MediaType";
-import { Series } from "media/models/Series";
-import { TmdbSeries } from "tmdb/models/TmdbSeries";
-import { getPoserLocalPath } from "../utilities/posterPath";
-import { ProductionStatus } from "media/models/ProductionStatus";
-import { TmdbMovie } from "tmdb/models/TmdbMovie";
-import { Movie } from "media/models/Movie";
-import { TmdbSeasonSummary } from "tmdb/models/TmdbSeriesSeason";
-import { SeriesSeasonSummary } from "media/models/SeriesSeason";
+
+// Chronicle Media
+import { SearchResult } from "../models/SearchResult.js";
+import { MediaType } from "../models/MediaType.js";
+import { ProductionStatus } from "../models/ProductionStatus.js";
+import { Movie } from "../models/Movie.js";
+import { Series } from "../models/Series.js";
+import { SeriesSeason, SeriesSeasonSummary } from "media/models/SeriesSeason.js";
+import { SeriesEpisode } from "media/models/SeriesEpisode.js";
+
+// Utilities
+import { toIntOrY } from "utilities/utilities.js";
+import { getArtworkLocalPath } from "../utilities/artworkPath.js";
+import { runtimeStatistics } from "../utilities/runtimeStatistics.js";
+import { generateEpisodeTable } from "../utilities/generateEpisodeTable.js";
 
 export function getSearchResults(data: TmdbSearchResult[]) : SearchResult[]
 {
@@ -22,7 +33,7 @@ export function getSearchResults(data: TmdbSearchResult[]) : SearchResult[]
 			type: MediaType = 'movie',
 			imdb_id = null;
 
-		const poster_path = r.poster_path ? TmdbClient.POSTER_BASE_URL + r.poster_path : null;
+		const artwork_path = r.poster_path ? TmdbClient.POSTER_BASE_URL + r.poster_path : null;
 
 		if(isTmdbMovie(r))
 		{
@@ -44,7 +55,7 @@ export function getSearchResults(data: TmdbSearchResult[]) : SearchResult[]
 			type: type,
 			imdb_id: imdb_id,
 			tmdb_id: Number(r.id),
-			poster: poster_path
+			artwork: artwork_path
 		}
 	});
 }
@@ -52,55 +63,56 @@ export function getSearchResults(data: TmdbSearchResult[]) : SearchResult[]
 export function getMovie(data: TmdbMovie, image_path: string) : Movie
 {
 	const year = toIntOrY(data.release_date?.slice(0, 4), null);
-	const poster = data.poster_path ? `https://image.tmdb.org/t/p/original${data.poster_path}` : null;
+	const artwork = data.poster_path ? `https://image.tmdb.org/t/p/original${data.poster_path}` : null;
 	const full_title = data.title + year ? `(${year})` : "";
+	const director: string = data.credits?.crew.filter(c => c.department === "Directing").map((a: TmdbCrew) => a.name)[0] ?? "";
 
 	return {
-		title: data.title,
-		categories: ["[[Movie]]"],
+		title: `\"${data.title}\"`,
+		categories: ["\"[[Movie]]\""],
 		genres: data.genres.map(g => g.name),
-		director: "",										// TBC needs enrich
-		cast: [],											// TBC needs enrich
-		writers: [],										// TBC needs enrich
+		director: data.credits?.crew.filter(c => c.department === "Directing").map((a: TmdbCrew) => a.name)[0] ?? "",
+		cast: data.credits?.cast.map((a: TmdbActor) => a.name) ?? [],
+		writers:  data.credits?.crew.filter(c => c.department === "Writing").map((a: TmdbCrew) => a.name) ?? [],
 		runtime: data.runtime,
 		rating: data.vote_average,
 		year: year,
-		imdb_id: data.imdb_id,
+		imdb_id: data?.external_ids?.imdb_id ?? null,
 		tmdb_id: data.id,
 		rated: null,
 		released: data.release_date,
 		languages: data.spoken_languages.map(l => l.english_name),
 		countries: data.production_countries.map(c => c.name),
-		poster: poster,
-		poster_local: getPoserLocalPath(full_title, poster, image_path),
+		artwork: artwork,
+		artwork_local: getArtworkLocalPath(full_title, artwork, image_path),
 		box_office: Number(data.revenue).toLocaleString('en-US'),
-		plot: data.overview
+		overview: data.overview
 	}
 }
 
 
 export function getSeries(data: TmdbSeries, image_path: string) : Series
 {
-	let categories  = ["[[TV Series]]"];
+	let categories  = ["\"[[TV Series]]\""];
 
 	if(isMiniseries(data))
 	{
-		categories.push("[[Miniseries]]");
+		categories.push("\"[[Miniseries]]\"");
 	}
 	else
 	{
 		categories.push(data.type);
 	}
 
-	const poster = `https://image.tmdb.org/t/p/original${data.poster_path}`;
+	const artwork = `https://image.tmdb.org/t/p/original${data.poster_path}`;
 
 	return {
-		title: data.name,
+		title: `\"${data.name}\"`,
 		categories: categories,
 		genres: data.genres.map(g => g.name),
-		cast: [],
+		cast: data.credits?.cast.map((a: TmdbActor) => a.name) ?? [],
 		year: Number(String(data.first_air_date).slice(0,4)),
-		imdb_id: null,
+		imdb_id: data?.external_ids?.imdb_id ?? null,
 		tmdb_id: data.id,
 		miniseries: isMiniseries(data),
 		number_of_seasons: data.number_of_seasons,
@@ -110,14 +122,14 @@ export function getSeries(data: TmdbSeries, image_path: string) : Series
 		released: data.first_air_date,
 		languages: data.spoken_languages.map(l => l.english_name),
 		countries: data.production_countries.map(c => c.name),
-		poster: poster,
-		poster_local: getPoserLocalPath(data.name, poster, image_path),
+		artwork: artwork,
+		artwork_local: getArtworkLocalPath(data.name, artwork, image_path),
 		number_of_episodes: data.number_of_episodes,
 		created_by: data.created_by.map(p => p.name),
 		status: getSeriesProductionStatus(data),
-		networks: data.networks.map(n => `${n.name} (${n.origin_country}`),
+		networks: data.networks.map(n => `${n.name} (${n.origin_country})`),
 		// The Following get removed from the frontmatter when writing the note
-		plot: data.overview
+		overview: data.overview
 	};
 }
 
@@ -130,73 +142,55 @@ function getSeasonSummaries(data: TmdbSeasonSummary[]) : SeriesSeasonSummary[]
 			tmdb_id: s.id,
 			title: s.name,
 			overview: s.overview,
-			poster_path: s.poster_path,
+			artwork_path: s.poster_path,
 			season_number: s.season_number,
 			vote_average: s.vote_average,
 		}
 	});
 }
 
-/*
-export function getSeason(series, data)
+export function getSeriesSeason(series: Series, data: TmdbSeriesSeason) : SeriesSeason
 {
-	let episodes = [],
-		episodes_with_runtimes = [],
-		runtime = null,
-		average_runtime = 0;
+	const episodes = data.episodes.map(e => getSeriesEpisodes(e))
 
-	if(Array.isArray(data.episodes) && data.episodes.length > 0)
-	{
-		episodes = data.episodes.map(e => this.normalizeEpisode(e))
-		episodes_with_runtimes = episodes.map(e => e.runtime).filter(e => Number.isFinite(e))
-
-		if(episodes_with_runtimes.length > 0 && episodes.length !== episodes_with_runtimes.length)
-		{
-			// Some runtimes are not specified approximate based on what we have
-			runtime = episodes_with_runtimes.reduce((a, b) => a + b, 0);
-			average_runtime = Math.round(runtime / episodes_with_runtimes.length);
-
-			episodes.forEach(e => {
-				if(!Number.isFinite(e.runtime))
-				{
-					e.runtime = average_runtime;
-				}
-			});
-		}
-
-		// Recalculate the aggregate values
-		runtime = episodes.map(e => e.runtime).reduce((a, b) => a + b, 0);
-		average_runtime = Math.round(runtime / episodes.length);
-	}
+	const stats = runtimeStatistics(episodes, "runtime")
 
 	return {
-		title: series.title,
-		categories: ["[[TV Series]]", "Series Season"],
-		series: "[[References/Media/Series/"+ slugifyFilename(series.title) + "]]",
-		season: data.season_number,
-		episode_count: episodes.length,
-		runtime: runtime,
-		average_runtime: average_runtime,
-		episodes: episodes,
-		plot: data.overview
-	}
-}
-
-export function getEpisode(data)
-{
-	return {
+		imdb_id: "",			// IMDB does not assign id's for tv series seasons
 		tmdb_id: data.id,
+		series_title: series.title,
+		series_imdb_id: series.imdb_id,
+		series_tmdb_id: series.tmdb_id,
 		title: data.name,
-		year: data.Year ? toIntOrNull(String(data.Year).slice(0, 4)) : null, // sometimes "2014–"
-		episode: data.episode_number,
-		plot: data.overview,
-		rating: Number(data.vote_average),
-		runtime: data.runtime,
-		released: data.air_date ?? null,
-		rated: null
-	};
+		season_number: data.season_number,
+		name: data.name,
+		overview: data.overview,
+		released: data.air_date,
+		rating: data.vote_average,
+		cast: data.credits ? data.credits.cast.map((a: TmdbActor) => a.name) : [],
+		networks: data.networks.map(n => `${n.name} (${n.origin_country})`),
+		number_of_episodes: episodes.length,
+		episodes: episodes,
+		runtime: stats.total_runtime,
+		average_runtime: stats.average_runtime,
+		episode_table: generateEpisodeTable(episodes)
+	}
 }
-*/
+
+export function getSeriesEpisodes(data: TmdbSeriesEpisode) : SeriesEpisode
+{
+	return {
+		imdb_id: data?.external_ids?.imdb_id ?? null,
+		tmdb_id: data.id,
+		title: `\"${data.name}\"`,
+		overview: data.overview,
+		episode_number: data.episode_number,
+		released: data.air_date,
+		runtime: data.runtime,
+		season_number: data.season_number,
+		rating: data.vote_average
+	}
+}
 
 //////////////////////////////////////////////////////
 // Utility functions

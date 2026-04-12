@@ -1,9 +1,10 @@
 import { TmdbMovie } from "./models/TmdbMovie.js";
 import { TmdbSeries } from "./models/TmdbSeries.js";
-import { TmdbSearchRequest } from "./models/TmdbRequest";
+import { TmdbSeriesSeason } from "./models/TmdbSeriesSeason.js";
 import { TmdbSearchResponse } from "./models/TmdbSearchResponse";
 import { TmdbSearchResult } from "./models/TmdbSearchResult";
-import { parseTitleAndYear } from "utilities/parsing";
+import { parseTitleAndYear } from "utilities/parseTitleAndYear.js";
+import { SearchResult } from "media/models/SearchResult.js";
 
 export class TmdbClient
 {
@@ -39,7 +40,35 @@ export class TmdbClient
 		}
 	}
 
-	async getMovie(id: number) : Promise<TmdbMovie | null>
+	async find(type: "movie" | "series", data: SearchResult) : Promise<TmdbMovie | TmdbSeries | null>
+	{
+		if(data.imdb_id)
+		{
+			const path = `/find/${data.imdb_id}`;
+			const resp = await this.request(path, {external_source: "imdb_id"})
+
+			const tmdb_id = type === "movie" ? resp.movie_results?.[0]?.id : resp.tv_results?.[0]?.id;
+
+			if(!tmdb_id)
+			{
+				return null;
+			}
+
+			if(type === "movie")
+			{
+				return this.getMovie(tmdb_id)
+			}
+			else if(type === "series")
+			{
+				return this.getSeries(tmdb_id);
+			}
+		}
+
+
+		return null;
+	}
+
+	async getMovie(id: number | string) : Promise<TmdbMovie | null>
 	{
 		const path = `/movie/${id}`;
 
@@ -48,7 +77,7 @@ export class TmdbClient
 		return details;
 	}
 
-	async getSeries(id: number) : Promise<TmdbSeries | null>
+	async getSeries(id: number | string) : Promise<TmdbSeries | null>
 	{
 		const path = `/tv/${id}`;
 
@@ -58,68 +87,26 @@ export class TmdbClient
 		return details;
 	}
 
-/*
-	async searchSeries(title: string, { year : number, language = 'en-US' } = {})
+	async getSeriesSeason(series_id: number | string, season_no: number) : Promise<TmdbSeriesSeason | null>
 	{
-		const data = await this.get('/search/tv', { query: title, first_air_date_year: year, language });
+		const path =  `/tv/${series_id}/season/${season_no}`;
 
-		return data.results ?? [];
+		const details : TmdbSeriesSeason = await this.request(path);
+
+		return details;
 	}
-
-	async getSeriesByTitle(title: string)
-	{
-		const searchResults = await this.searchSeries(title);
-
-		if (searchResults.length > 0)
-		{
-			const best = searchResults[0];
-			const data = await this.getSeriesByID(best.id);
-
-			return this.normalizeSeries(data)
-		}
-		else
-		{
-			return null;
-		}
-	}
-
-	async getSeriesByID(id)
-	{
-		if(id !== null)
-		{
-			const data = await this.get(`/tv/${id}`);
-
-			return data;
-		}
-		else
-		{
-			throw new Error("No TMDB id provided when requesting series data by id");
-		}
-	}
-
-	async getSeriesSeason(series, season_no, { language = 'en-US' } = {})
-	{
-		if(series && series?.tmdb_id !== undefined)
-		{
-			let season = await this.get(`/tv/${series.tmdb_id}/season/${season_no}`, { language });
-
-			if(season !== null)
-			{
-				season = this.normalizeSeason(series, season);
-
-				return season;
-			}
-		}
-
-		return null;
-	}
-*/
 
 	async request(path: string, query = {})
 	{
 		const url = new URL(`https://api.themoviedb.org/3${path}`);
 
-		Object.entries(query).forEach(([k, v]) => {
+		const base_query = {
+			append_to_response : "external_ids,credits"
+		}
+
+		const query_parameters = { ...base_query, ...query}
+
+		Object.entries(query_parameters).forEach(([k, v]) => {
 			if (v !== undefined && v !== null)
 			{
 				url.searchParams.set(k, String(v));

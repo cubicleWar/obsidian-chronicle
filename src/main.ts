@@ -1,27 +1,10 @@
 import { Chronicle } from './chronicle/Chronicle.js'
 import Handlebars from "handlebars";
+import { toMarkdownlist } from 'obsidianx/formatters.js';
+import { toBacklink } from 'obsidianx/formatters.js';
 
-Handlebars.registerHelper('list', function(value) {
-	let list = ``;
+Handlebars.registerHelper('list', (value) => toMarkdownlist(value));
 
-	if(typeof value === 'string')
-	{
-		value = value.split(',').map(item => item.trim());
-	}
-
-	if(Array.isArray(value))
-	{
-		for(let i = 0, len = value.length; i < len; i++)
-		{
-			list += `\n  - ${value[i]}`
-		}
-
-		return list;
-	}
-	else
-	{
-		return value;
-	}
-});
+Handlebars.registerHelper('backlink', (value, mode) => toBacklink(value, mode));
 
 export default Chronicle;
