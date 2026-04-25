@@ -4,7 +4,9 @@ import { TmdbSeriesSeason } from "./models/TmdbSeriesSeason.js";
 import { TmdbSearchResponse } from "./models/TmdbSearchResponse";
 import { TmdbSearchResult } from "./models/TmdbSearchResult";
 import { parseTitleAndYear } from "utilities/parseTitleAndYear.js";
-import { SearchResult } from "media/models/SearchResult.js";
+import { TmdbSeriesEpisode } from "./models/TmdbSeriesEpisode.js";
+
+type TmdbMedia = TmdbMovie | TmdbSeries | TmdbSeriesEpisode
 
 export class TmdbClient
 {
@@ -40,11 +42,11 @@ export class TmdbClient
 		}
 	}
 
-	async find(type: "movie" | "series", data: SearchResult) : Promise<TmdbMovie | TmdbSeries | null>
+	async find(type: "movie" | "series" | "episode", item: any) : Promise<TmdbMedia | null>
 	{
-		if(data.imdb_id)
+		if(item.imdb_id)
 		{
-			const path = `/find/${data.imdb_id}`;
+			const path = `/find/${item.imdb_id}`;
 			const resp = await this.request(path, {external_source: "imdb_id"})
 
 			const tmdb_id = type === "movie" ? resp.movie_results?.[0]?.id : resp.tv_results?.[0]?.id;
@@ -62,8 +64,11 @@ export class TmdbClient
 			{
 				return this.getSeries(tmdb_id);
 			}
+			else if(type === "episode")
+			{
+				return null;
+			}
 		}
-
 
 		return null;
 	}

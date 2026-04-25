@@ -6,7 +6,7 @@ export interface SeriesSeasonSummary
 {
 	air_date: string;
 	episode_count: number;
-	tmdb_id: number;
+	tmdb_id: number | null;
 	title: string;
 	overview: string;
 	artwork_path: string;

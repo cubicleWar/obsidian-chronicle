@@ -31,7 +31,6 @@ export class ChronicleSettingTab extends PluginSettingTab
 		this.displayMovieSettings(containerEl);
 		this.displaySeriesSettings(containerEl);
 		this.displayMiniSeriesSettings(containerEl);
-		this.displayArtworkSettings(containerEl);
 		this.displayGeneralSettings(containerEl);
 	}
 
@@ -41,7 +40,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('OMDb API key')
-			//.setDesc('Your API key for OMDb')
+			.setDesc('Your API key to access Open Movie Database.')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.plugin.settings.omdb_api_key)
@@ -52,7 +51,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('TMDB API key')
-			//.setDesc('Your API key for TMDB')
+			.setDesc('Your API key to access The Movie Database.')
 			.addTextArea(text => text
 				.setPlaceholder('')
 				.setValue(this.plugin.settings.tmdb_api_key)
@@ -87,7 +86,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 	{
 		new Setting(containerEl)
 			.setName('Differentiate miniseries')
-			.setDesc('Treats Miniseries as a distinct format from regular Series and Seasons, complete with its own template and note location.')
+			.setDesc('Treat Miniseries as a distinct format from regular Series and Seasons, complete with its own template and note location.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.differentiate_miniseries)
 				.onChange(async (value) => {
@@ -100,13 +99,34 @@ export class ChronicleSettingTab extends PluginSettingTab
 		this.createSearchSetting(containerEl, "miniseries_output_path", "Miniseries notes location", "Where to save Miniseries notes.", "Media/Miniseries", "folder");
 	}
 
-	displayArtworkSettings(containerEl: HTMLElement)
+	displayGeneralSettings(containerEl: HTMLElement)
 	{
-		new Setting(containerEl).setName("media Posters").setHeading();
+		new Setting(containerEl).setName("General Settings").setHeading();
+
+		new Setting(containerEl)
+			.setName('Export reference templates')
+			.setDesc('Save reference templates for all media types to your vault for customize and use.')
+			.addButton(btn => btn
+				.setButtonText("Export Templates")
+				.onClick((event) => {
+					this.saveTemplates();
+				}));
+
+		new Setting(containerEl)
+			.setName('Switch to generated notes')
+			.setDesc('Automatically open of notes created or updated when chronicling media.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.switch_to_created_note)
+				.onChange(async (value) => {
+					this.plugin.settings.switch_to_created_note = value;
+					await this.plugin.saveSettings();
+				}));
+
+
 
 		new Setting(containerEl)
 			.setName('Save media artwork')
-			.setDesc('Save media artwork such as the movie poster to your vault.')
+			.setDesc('Save artwork such as the movie posters locally to your vault when chronicling new media.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.save_artwork_locally)
 				.onChange(async value => {
@@ -118,32 +138,8 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 		if (this.plugin.settings.save_artwork_locally)
 		{
-			this.createSearchSetting(containerEl, "artwork_output_path", "Media artwork location", "Where to save artwork such as movie posters", "_attachments/artwork", "folder");
+			this.createSearchSetting(containerEl, "artwork_output_path", "Artwork location", "The folder in which to save artwork such as movie posters.", "_attachments/artwork", "folder");
 		}
-	}
-
-	displayGeneralSettings(containerEl: HTMLElement)
-	{
-		new Setting(containerEl).setName("General Settings").setHeading();
-
-		new Setting(containerEl)
-			.setName('Switch to generated notes')
-			.setDesc('Automatically open the note for chronicled media.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.switch_to_created_note)
-				.onChange(async (value) => {
-					this.plugin.settings.switch_to_created_note = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Export example template files')
-			.setDesc('Creates example template files for for you to expand and use.')
-			.addButton(btn => btn
-				.setButtonText("Create")
-				.onClick((event) => {
-					this.saveTemplates();
-				}));
 	}
 
 	// Export the example templates

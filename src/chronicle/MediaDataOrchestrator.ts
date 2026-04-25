@@ -18,7 +18,8 @@ type ClientSet = {
 	search: {
 		get: (search_str: string, type: MediaType) => any,
 		normalize: (data: any) => SearchResult[]
-	}
+	},
+	find: (type: MediaType, item: SearchResult) => any | null,
 	movie: {
 		get: (id: string) => any,
 		normalize: (data: any, artwork: string) => Movie
@@ -77,18 +78,15 @@ export class MediaDataOrchestrator
 
 		for(const clientSet of clients)
 		{
-			const id = <string | null>item[clientSet.id_name];
+			let id = <string | null>item[clientSet.id_name];
 
-			// Todo fallback when tmdb_id is not present?
-			if(id)
+			const result = id ? await clientSet[type].get(id) : await clientSet.find(type, item);
+
+			if(result !== null)
 			{
-				const result = await clientSet[type].get(id)
-
-				if(result !== null)
-				{
-					results.push(clientSet[type].normalize(result, this.artwork_path));
-				}
+				results.push(clientSet[type].normalize(result, this.artwork_path));
 			}
+
 		}
 
 		return mergeModelData<any>(...results);
@@ -244,6 +242,7 @@ export class MediaDataOrchestrator
 		{
 			omdbSet = {
 				id_name: "imdb_id",
+				find: omdb.find.bind(omdb),
 				search: {
 					get: omdb.search.bind(omdb),
 					normalize: OmdbNormalizer.getSearchResults
@@ -269,6 +268,7 @@ export class MediaDataOrchestrator
 		{
 			tmdbSet = {
 				id_name: "tmdb_id",
+				find: tmdb.find.bind(tmdb),
 				search: {
 					get: tmdb.search.bind(tmdb),
 					normalize: TmdbNormalizer.getSearchResults

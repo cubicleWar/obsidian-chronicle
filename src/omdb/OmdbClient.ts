@@ -7,6 +7,8 @@ import { OmdbSeriesEpisode } from "./models/OmdbSeriesEpisode.js";
 import { parseTitleAndYear } from "../utilities/parseTitleAndYear.js"
 import { OmdbSearchResult } from "./models/OmdbSearchResult.js"
 
+type OmdbMedia = OmdbMovie | OmdbSeries | OmdbSeriesEpisode
+
 export class OmdbClient
 {
 	readonly API_KEY: string;
@@ -38,6 +40,26 @@ export class OmdbClient
 		}
 	}
 
+	async find(type: "movie" | "series" | "episode", item: any) : Promise<OmdbMedia | null>
+	{
+		let details : OmdbMedia | null = null;
+
+		if(item.imdb_id)
+		{
+			details = await this.request({i: item.imdb_id, type: type});
+		}
+		else
+		{
+			const title = item.title?.trim();
+			const year = item.year?.trim();
+
+			// Search based on exact title - could fall back on a search after this but certainty degrades
+			details = await this.request({t: title, type: type, y: year});
+		}
+
+		return details;
+	}
+
 	async getMovie(id: string) : Promise<OmdbMovie | null>
 	{
 		const searchTerms: OmdSearchTerms = {
@@ -65,8 +87,6 @@ export class OmdbClient
 		{
 			// Todo: Enrich the epsiode data
 			season = await this.enrichEpisodes(season)
-			console.log("OMDB season")
-			console.log(season)
 
 			return season;
 		}

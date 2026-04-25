@@ -34,6 +34,7 @@
 	color: var(--text-muted);
 	font-size: 12px;
 }
+
 /* Settings*/
 .stacked-setting {
 	display: flex;

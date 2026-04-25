@@ -177,7 +177,7 @@ export function getSeriesSeason(series: Series, data: TmdbSeriesSeason) : Series
 	}
 }
 
-export function getSeriesEpisodes(data: TmdbSeriesEpisode) : SeriesEpisode
+function getSeriesEpisodes(data: TmdbSeriesEpisode) : SeriesEpisode
 {
 	return {
 		imdb_id: data?.external_ids?.imdb_id ?? null,

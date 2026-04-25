@@ -16,7 +16,7 @@ export function runtimeStatistics(items: any[], parameter: string = "runtime") :
 	}
 
 	const average_runtime = Math.round(100 * total_runtime / included_epsiode_count) / 100;
-	total_runtime = items.length * average_runtime
+	total_runtime = Math.round(100 * items.length * average_runtime) / 100;
 
 	return {
 		average_runtime: average_runtime,

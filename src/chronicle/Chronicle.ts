@@ -17,8 +17,6 @@ import { ArtworkOwner } from "media/models/ArtworkOwner.js";
 
 import { SeriesSeasonSelectModal } from "./ui/SeriesSeasonSelectModal.js";
 import { getCurrentIsoDate } from "utilities/Dates.js";
-import { mergeModelData } from "utilities/utilities.js";
-import { MediaType } from "media/models/MediaType.js";
 
 
 
@@ -104,7 +102,7 @@ export class Chronicle extends Plugin
 				const isMiniseries = series.miniseries;
 
 				this.saveArtwork(series)
-
+console.log(series)
 				if(!isMiniseries)
 				{
 					// Show a secondary model to select the season

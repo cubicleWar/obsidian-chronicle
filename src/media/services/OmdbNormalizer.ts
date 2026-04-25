@@ -5,7 +5,7 @@ import { SearchResult } from "../models/SearchResult";
 import { Series } from "../models/Series";
 import { ProductionStatus } from "../models/ProductionStatus.js"
 import { getArtworkLocalPath } from "../utilities/artworkPath";
-import { SeriesSeason } from "../models/SeriesSeason";
+import { SeriesSeason, SeriesSeasonSummary } from "../models/SeriesSeason";
 import { SeriesEpisode } from "../models/SeriesEpisode";
 
 import { OmdbMovie } from "omdb/models/OmdbMovie.js"
@@ -71,6 +71,25 @@ export function getMovie(data: OmdbMovie, image_path: string) : Movie
 export function getSeries(data: OmdbSeries, image_path: string) : Series
 {
 	let categories  = ["\"[[TV Series]]\""];
+	let season_summaries : SeriesSeasonSummary[] = []
+	const total_seasons = toIntOrY(data.totalSeasons, 1);
+
+	for(let i = 0; i < total_seasons; i++)
+	{
+		const no = i + 1;
+		// OMDB does not provide a summary of seasons so create
+		// summaries based on the season number
+		season_summaries.push({
+			episode_count: 0,
+			air_date: '',
+			tmdb_id: null,
+			title: 'Season ' + no,
+			overview: '',
+			artwork_path: '',
+			season_number: no,
+			vote_average: 0
+		})
+	}
 
 	return {
 		title: `\"${data.Title}\"`,
@@ -88,14 +107,14 @@ export function getSeries(data: OmdbSeries, image_path: string) : Series
 		countries: data.Country && data.Country !== "N/A" ? safeArraySplit(data.Country) : [],
 		artwork: data.Poster && data.Poster !== "N/A" ? data.Poster : null,
 		artwork_local: getArtworkLocalPath(data.Title, data.Poster, image_path),
-		number_of_seasons: toIntOrY(data.totalSeasons, 1),
+		number_of_seasons: total_seasons,
 		number_of_episodes: null,
 		overview: data.Plot && data.Plot !== "N/A" ? data.Plot : null,
 		status: getSeriesProductionStatus(data),
 		// Items not available on the OMDB API
 		created_by: [],
 		networks: [],
-		seasons: [],
+		seasons: season_summaries,
 	};
 }
 
@@ -127,7 +146,7 @@ export function getSeriesSeason(series: Series, data: OmdbSeriesSeason) : Series
 	}
 }
 
-export function getSeriesEpisode(season: OmdbSeriesSeason, data: Partial<OmdbSeriesEpisode>) : SeriesEpisode
+function getSeriesEpisode(season: OmdbSeriesSeason, data: Partial<OmdbSeriesEpisode>) : SeriesEpisode
 {
 	return {
 		imdb_id: data.imdbID ?? null,
@@ -170,7 +189,7 @@ function isMiniseries(data: OmdbSeries) : boolean
 	return (
 		data.Type === "series" &&
 		Number(data.totalSeasons) === 1 &&
-		String(data.Year).length > 4	// On going will have 2025-
+		String(data.Year).length === 4	// On going will have 2025-
 	);
 }
 
