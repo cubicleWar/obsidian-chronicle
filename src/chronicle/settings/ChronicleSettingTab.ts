@@ -2,7 +2,7 @@ import { App, PluginSettingTab, Setting, SearchComponent} from "obsidian";
 import { Chronicle } from "../Chronicle";
 import { FolderSuggestor } from "obsidianx/ui/FolderSuggestor.js";
 import { FileSuggestor } from "obsidianx/ui/FileSuggestor.js";
-import { StringKeys } from "utilities/guards/Stringkeys";
+import { StringKeys } from "utilities/models/types.js";
 
 // Default templates
 import { MOVIE_TEMPLATE } from "../templates/MovieTemplate.js";

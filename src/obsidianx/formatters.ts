@@ -55,3 +55,47 @@ export function slugifyFilename(filename: string, spacer: string = " ") : string
 			.replace(/\.$/, "") 				// no trailing dot on Windows
 			.slice(0, 180);
 }
+
+/**
+ * Converts a string into a YAML-safe scalar for Obsidian frontmatter.
+ *
+ * - Leaves simple strings unquoted.
+ * - Wraps risky strings in double quotes.
+ * - Escapes backslashes and double quotes inside quoted strings.
+ */
+export function toYamlSafeString(value: string): string
+{
+	const trimmed = value.trim();
+
+	if (trimmed === "")
+	{
+		return '""';
+	}
+
+	const yamlBooleanOrNull = /^(true|false|null|~)$/i;
+	const yamlNumber = /^[-+]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?$/;
+	const yamlDate = /^\d{4}-\d{2}-\d{2}$/;
+	const startsWithUnsafeChar = /^[!&*[\]{}#|>@`"'%?:,\-]/;
+	const containsUnsafeYamlSyntax = /[:#]\s|[\n\r\t]/;
+	const hasLeadingOrTrailingWhitespace = value !== trimmed;
+
+	const needsQuotes =
+		yamlBooleanOrNull.test(trimmed) ||
+		yamlNumber.test(trimmed) ||
+		yamlDate.test(trimmed) ||
+		startsWithUnsafeChar.test(trimmed) ||
+		containsUnsafeYamlSyntax.test(value) ||
+		hasLeadingOrTrailingWhitespace;
+
+	if (!needsQuotes)
+	{
+		return value;
+	}
+
+	return `"${value
+		.replace(/\\/g, "\\\\")
+		.replace(/"/g, '\\"')
+		.replace(/\n/g, "\\n")
+		.replace(/\r/g, "\\r")
+		.replace(/\t/g, "\\t")}"`;
+}

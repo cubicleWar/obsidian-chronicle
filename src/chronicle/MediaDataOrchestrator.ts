@@ -11,7 +11,9 @@ import { SettingsService } from "obsidianx/services/Settings.service.js";
 import { EventRef } from "obsidian";
 import { TmdbClient } from "tmdb/TmdbClient.js";
 import { SeriesSeason } from "media/models/SeriesSeason.js";
-import { mergeModelData } from "utilities/utilities.js";
+import { mergeObjects } from "utilities/entity-unify/merge.js";
+import { resolveFingerprintSpecs } from "media/utilities/resolveFingerprintSpecs.js"
+import { makeFingerprint } from "utilities/entity-unify/fingerprint.js"
 
 type ClientSet = {
 	id_name: "imdb_id" | "tmdb_id",
@@ -86,63 +88,11 @@ export class MediaDataOrchestrator
 			{
 				results.push(clientSet[type].normalize(result, this.artwork_path));
 			}
-
 		}
 
-		return mergeModelData<any>(...results);
-	}
-/*
-	async getMovie(item: SearchResult) : Promise<Movie | null>
-	{
-		const clients = this.getClients("movie");
-		let results = [];
-
-		for(let i = 0, len = clients.length; i < len; i++)
-		{
-			const { client, normalizer } = <ClientSet>clients[i];
-
-			const id = item[client.ID_NAME]
-
-			// Todo fallback when tmdb_id is not present?
-			if(id !== null)
-			{
-				const result = await client.getMovie(id)
-
-				if(result !== null)
-				{
-					results.push(normalizer.getMovie(result, this.artwork_path));
-				}
-			}
-		}
-
-		return mergeModelData<Movie>(...results);
+		return mergeObjects<any>(results, makeFingerprint(resolveFingerprintSpecs));
 	}
 
-	async getSeries(item: SearchResult) : Promise<Series | null>
-	{
-		const clients = this.getClients("series");
-		let results = [];
-
-		for(let i = 0, len = clients.length; i < len; i++)
-		{
-			const { client, normalizer } = <ClientSet>clients[i];
-
-			const id = item[client.ID_NAME]
-
-			if(id !== null)
-			{
-				const result = await client.getSeries(id)
-
-				if(result !== null)
-				{
-					results.push(normalizer.getSeries(result, this.artwork_path));
-				}
-			}
-		}
-
-		return mergeModelData<Series>(...results);
-	}
-*/
 	async getSeriesSeason(series: Series, season_no: number) : Promise<SeriesSeason | null>
 	{
 		const clients = this.getClients("series");
@@ -164,7 +114,7 @@ export class MediaDataOrchestrator
 			}
 		}
 
-		return mergeModelData<any>(...results);
+		return mergeObjects<any>(results, makeFingerprint(resolveFingerprintSpecs));
 	}
 
 	// Merges together series and season data to form a Miniseries

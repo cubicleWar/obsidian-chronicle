@@ -81,3 +81,27 @@ For a quick test build:
 For a production build:
 
 	npm run build
+
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+### What this means
+
+You are free to:
+- Use this plugin for personal or commercial purposes
+- Modify and distribute the code
+- Include it in other projects
+
+Under the following conditions:
+- You must include the original license and copyright notice
+
+### Disclaimer
+
+This plugin is provided "as is", without warranty of any kind. Use at your own risk.
+
+### Third-Party Services
+
+This plugin may integrate with third-party APIs (e.g. OMDb, TMDb).
+Use of those services is subject to their respective terms and conditions.

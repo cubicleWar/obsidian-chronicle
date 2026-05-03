@@ -1,8 +1,9 @@
 const SERIES_SEASON_TEMPLATE_CONTENT =
 `---
 tmdb_id: {{ tmdb_id }}
-title: {{ title }}
-series: {{ series_title }}
+title: {{ safeYamlString title }}
+series: {{ safeYamlString series_title }}
+series_note: {{ backlink series_link }}
 series_imdb_id: {{ series_imdb_id }}
 series_tmdb_id: {{ series_tmdb_id }}
 season: {{ season_number }}

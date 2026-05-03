@@ -1,4 +1,4 @@
-import { unique } from 'radash'
+import { RecordLike } from "./models/types.js";
 
 /** -----------------------
  *  Small utilities
@@ -25,102 +25,64 @@ export function safeArraySplit(s: string)
 	return String(s).split(",").map(x => x.trim()).filter(Boolean);
 }
 
-
-// Merging functions
-
-type AnyObject = Record<string, any>;
-
-
-// Merge two models e.g. movie data sourced from two different API's
-// Model 'a' is preferred over model
-export function mergeModelData<T>(...models: T[]): T
+//
+// Normalizes strings for direct comparison
+// e.g. normalizeTest("Crème Brûlée") => "Creme Brulee"
+//
+export function normalizeText(value: unknown): string
 {
-	if(mergeObjects.length === 0)
+	if (value == null)
 	{
-		throw new Error("mergeModelData requires at least one argument");
+		return "";
 	}
 
-	return models.reduce((acc, obj) => mergeInternal(acc, obj)) as T;
+	return String(value)
+		.trim()
+		.toLowerCase()
+		.normalize("NFKD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.replace(/[^\p{L}\p{N}]+/gu, " ")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
-function mergeInternal(a: any, b: any): any
+// Returns the first field from an array of field names that is present in an object and
+// has a valid value
+export function firstNonEmpty(obj: Record<string, unknown>, fields: string[], transform?: (v: unknown) => string): string
 {
-	// If A is valid, use it unless we need to recurse
-	if (isValid(a))
+	for (const field of fields)
 	{
-		// Objects → deep merge
-		if (isPlainObject(a) && isPlainObject(b))
+		if (!(field in obj))
 		{
-			return mergeObjects(a, b);
+			continue;
 		}
 
-		// Arrays → combine and dedupe
-		if (Array.isArray(a) && Array.isArray(b))
+		const raw = obj[field];
+		const value = transform ? transform(raw) : normalizeText(raw);
+
+		if (value)
 		{
-			const combined = [...(a ?? []), ...(b ?? [])];
-
-			return unique(combined,(i: any) => getDedupKey(i));
+			return value;
 		}
-
-		// Primitive → A wins
-		return a;
 	}
 
-	// A invalid → use B (even if B invalid, consistent fallback)
-	return b;
+	return "";
 }
 
-function mergeObjects(a: AnyObject, b: AnyObject): AnyObject
+
+//
+// Returns the first usable normalized value from the provided fields.
+//
+export function firstMatchingValue(obj: RecordLike, fields: string[], transform: (value: unknown) => string = normalizeText): string
 {
-	const result: AnyObject = {};
-
-	const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
-
-	for (const key of keys)
+	for (const field of fields)
 	{
-		result[key] = mergeInternal(a?.[key], b?.[key]);
+		if (!(field in obj)) continue;
+
+		const value = transform(obj[field]);
+
+		if (value) return value;
 	}
 
-	return result;
-}
-
-function isValid(value: any): boolean
-{
-	return value !== null && value !== undefined && value !== "" && value !== "N/A";
-}
-
-function isPlainObject(value: any): value is Record<string, any>
-{
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function getDedupKey(value: any): string
-{
-	// Primitives
-	if (value === null || typeof value !== "object")
-	{
-		return `primitive:${String(value)}`;
-	}
-
-	// Fallback: deep stringify (stable-ish)
-	return `obj:${stableStringify(value)}`;
-}
-
-function stableStringify(obj: any): string
-{
-	if (obj === null || typeof obj !== "object")
-	{
-		return JSON.stringify(obj);
-	}
-
-	if (Array.isArray(obj))
-	{
-		return `[${obj.map(stableStringify).join(",")}]`;
-	}
-
-	const keys = Object.keys(obj).sort();
-
-	return `{${keys
-		.map(k => `"${k}":${stableStringify(obj[k])}`)
-		.join(",")}}`;
+	return "";
 }

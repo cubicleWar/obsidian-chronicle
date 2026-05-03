@@ -102,7 +102,7 @@ export class Chronicle extends Plugin
 				const isMiniseries = series.miniseries;
 
 				this.saveArtwork(series)
-console.log(series)
+
 				if(!isMiniseries)
 				{
 					// Show a secondary model to select the season
@@ -136,6 +136,8 @@ console.log(series)
 						}
 						else
 						{
+							season.series_link = series_file_name;
+
 							const season_file_name = slugifyFilename(`${series.title} (Season ${season_no}).md`)
 
 							// Save the Series

@@ -17,6 +17,7 @@ export interface SeriesSeasonSummary
 export interface SeriesSeason
 {
 	series_title: string;
+	series_link?: string;
 	series_tmdb_id: number | null;
 	series_imdb_id: string | null;
 	imdb_id: string | null;

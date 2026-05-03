@@ -1,23 +1,39 @@
 import esbuild from "esbuild";
 import process from "process";
+import builtins from "builtin-modules";
 
 const isWatch = process.argv.includes("--watch");
+const production = process.argv.includes("production");
 
-const context = await esbuild.context({
+const buildOptions = {
 	entryPoints: ["src/main.ts"],
 	bundle: true,
 	format: "cjs",
 	target: "es2020",
 	outfile: "main.js",
-	sourcemap: isWatch,
-	external: ["obsidian"],
-	logLevel: "info"
-});
+	logLevel: "info",
+	sourcemap: production ? false : "inline",
+	treeShaking: true,
+	minify: production,
+	external: [
+		"obsidian",
+		...builtins
+	]
+};
 
-if (isWatch) {
-	await context.watch();
+if (isWatch)
+{
+	const ctx = await esbuild.context(buildOptions);
+	await ctx.watch();
 	console.log("Watching...");
-} else {
-	await context.rebuild();
-	await context.dispose();
+}
+else if(production)
+{
+	await esbuild.build(buildOptions);
+}
+else
+{
+	const ctx = await esbuild.context(buildOptions);
+	await ctx.rebuild();
+	await ctx.dispose();
 }

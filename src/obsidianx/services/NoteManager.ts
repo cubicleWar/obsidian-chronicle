@@ -1,6 +1,6 @@
 import { VaultFileService } from "./VaultFileService.js";
 import { NoteRenderer } from "./NoteRenderer.js";
-import { Dictionary } from "utilities/models/Dictionary.js";
+import { Dictionary } from "utilities/models/types.js";
 import { TFile } from "obsidian";
 
 export class NoteManager

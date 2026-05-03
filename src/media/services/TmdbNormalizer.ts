@@ -68,7 +68,7 @@ export function getMovie(data: TmdbMovie, image_path: string) : Movie
 	const director: string = data.credits?.crew.filter(c => c.department === "Directing").map((a: TmdbCrew) => a.name)[0] ?? "";
 
 	return {
-		title: `\"${data.title}\"`,
+		title: `${data.title}`,
 		categories: ["\"[[Movie]]\""],
 		genres: data.genres.map(g => g.name),
 		director: data.credits?.crew.filter(c => c.department === "Directing").map((a: TmdbCrew) => a.name)[0] ?? "",
@@ -107,7 +107,7 @@ export function getSeries(data: TmdbSeries, image_path: string) : Series
 	const artwork = `https://image.tmdb.org/t/p/original${data.poster_path}`;
 
 	return {
-		title: `\"${data.name}\"`,
+		title: `${data.name}`,
 		categories: categories,
 		genres: data.genres.map(g => g.name),
 		cast: data.credits?.cast.map((a: TmdbActor) => a.name) ?? [],
@@ -182,7 +182,7 @@ function getSeriesEpisodes(data: TmdbSeriesEpisode) : SeriesEpisode
 	return {
 		imdb_id: data?.external_ids?.imdb_id ?? null,
 		tmdb_id: data.id,
-		title: `\"${data.name}\"`,
+		title: `${data.name}`,
 		overview: data.overview,
 		episode_number: data.episode_number,
 		released: data.air_date,

@@ -2,7 +2,7 @@ const SERIES_TEMPLATE_CONTENT =
 `---
 imdb_id: {{ imdb_id }}
 tmdb_id: {{ tmdb_id }}
-title: {{ title }}
+title: {{ safeYamlString title }}
 categories: {{ list categories }}
 genres: {{ list genres }}
 cast: {{cast}}

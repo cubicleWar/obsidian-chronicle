@@ -5,10 +5,18 @@
 	"main": "index.js",
 	"keywords": [],
 	"author": "",
-	"license": "ISC",
+	"license": "MIT",
 	"type": "commonjs",
+	"files": [
+		"main.js",
+		"manifest.json",
+		"Styles.css",
+		"readme.md",
+		"license.md"
+	],
 	"devDependencies": {
 		"@types/node": "^25.0.3",
+		"builtin-modules": "^5.1.0",
 		"esbuild": "^0.27.2",
 		"tslib": "^2.8.1",
 		"typescript": "^5.9.3"
@@ -22,9 +30,9 @@
 		"radash": "^12.1.1"
 	},
 	"scripts": {
-		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"build": "npm run typecheck && node esbuild.config.mjs",
 		"build-dev": "node esbuild.config.mjs",
-		"dev": "node esbuild.config.mjs --watch"
+		"build": "node esbuild.config.mjs production",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"release:build": "npm run typecheck && npm run build"
 	}
 }

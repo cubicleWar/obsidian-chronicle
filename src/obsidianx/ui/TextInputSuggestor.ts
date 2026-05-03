@@ -6,7 +6,7 @@ export abstract class TextInputSuggestor<T> implements ISuggestOwner<T>
 {
 	protected inputEl: HTMLInputElement | HTMLTextAreaElement;
 
-	private popper: PopperInstance;
+	private popper: PopperInstance | null = null;
 	private scope: Scope;
 	private suggestEl: HTMLElement;
 	private suggest: Suggestor<T>;
@@ -72,23 +72,24 @@ export abstract class TextInputSuggestor<T> implements ISuggestOwner<T>
 				{
 					name: "sameWidth",
 					enabled: true,
+					phase: "beforeWrite",
+					requires: ["computeStyles"],
 					fn: ({ state, instance }) => {
 						// Note: positioning needs to be calculated twice -
 						// first pass - positioning it according to the width of the popper
 						// second pass - position it with the width bound to the reference element
 						// we need to early exit to avoid an infinite loop
 						const targetWidth = `${state.rects.reference.width}px`;
+						const popperStyles = (state.styles.popper ??= {});
 
-						if (state.styles.popper?.width === targetWidth)
+						if (popperStyles.width === targetWidth)
 						{
 							return;
 						}
 
-						state.styles.popper.width = targetWidth;
-						instance.update();
-					},
-					phase: "beforeWrite",
-					requires: ["computeStyles"],
+						popperStyles.width = targetWidth;
+						void instance.update();
+					}
 				},
 			],
 		});

@@ -42,7 +42,7 @@ export function getMovie(data: OmdbMovie, image_path: string) : Movie
 	const full_title = `${data.Title} (${year})`;
 
 	return {
-		title: `\"${data.Title}\"`,
+		title: `${data.Title}`,
 		categories: ["\"[[Movies]]\""],
 		genres: safeArraySplit(data.Genre),
 		director: data.Director && data.Director !== "N/A" ? data.Director : null,
@@ -92,7 +92,7 @@ export function getSeries(data: OmdbSeries, image_path: string) : Series
 	}
 
 	return {
-		title: `\"${data.Title}\"`,
+		title: `${data.Title}`,
 		categories: categories,
 		miniseries: isMiniseries(data),
 		genres: safeArraySplit(data.Genre),
@@ -151,7 +151,7 @@ function getSeriesEpisode(season: OmdbSeriesSeason, data: Partial<OmdbSeriesEpis
 	return {
 		imdb_id: data.imdbID ?? null,
 		tmdb_id: null,
-		title: `\"${data.Title}\"`,
+		title: `${data.Title}`,
 		season_number: toIntOrNull(season.Season),
 		episode_number: toIntOrNull(data.Episode),
 		overview: data.Plot && data.Plot !== "N/A" ? data.Plot : "",
