@@ -60,8 +60,34 @@
 	width: 100%;
 }
 
-.stacked-search-wrapper input {
+.stacked-search-wrapper input,
+.stacked-setting .setting-item-control input,
+.stacked-setting .setting-item-control textarea {
 	width: 100%;
 	box-sizing: border-box;
 	font-family: var(--font-monospace);
+}
+
+.stacked-setting .setting-item-control textarea {
+	height: auto;
+}
+
+.is-disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+.is-disabled input,
+.is-disabled button,
+.is-disabled .search-input {
+	cursor: not-allowed;
+}
+
+.settings-error {
+	padding: 12px;
+	margin-bottom: 16px;
+	border-radius: 8px;
+	background-color: color-mix(in srgb, var(--text-error) 12%, transparent);
+	border: 2px solid var(--text-error);
+	color: var(--text-error);
 }

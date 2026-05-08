@@ -1,6 +1,7 @@
-import { Plugin, Notice, TFile } from "obsidian";
+import { App, Plugin, Notice, TFile } from "obsidian";
 import { ChronicleSettings } from "./settings/ChronicleSettings.js";
 import { DEFAULT_SETTINGS } from "./settings/DefaultSettings.js";
+import { settingsValidator } from "./settings/validator.js"
 import { ChronicleSettingTab } from "./settings/ChronicleSettingTab.js";
 import { MediaSearchModal } from "./ui/MediaSearchModal.js"
 import { MediaDataOrchestrator } from "./MediaDataOrchestrator.js";
@@ -23,7 +24,7 @@ import { getCurrentIsoDate } from "utilities/Dates.js";
 export class Chronicle extends Plugin
 {
 	settings: ChronicleSettings = DEFAULT_SETTINGS;
-	settingsService = new SettingsService<ChronicleSettings>(DEFAULT_SETTINGS);
+	settingsService = new SettingsService<ChronicleSettings>(DEFAULT_SETTINGS, settingsValidator);
 	mediaService!: MediaDataOrchestrator;
 	fileService!: VaultFileService;
 	note_manager!: NoteManager;
@@ -55,6 +56,8 @@ export class Chronicle extends Plugin
 
 	async addOrUpdateMovie()
 	{
+		if(!this.ensureSettings("movie")) return;
+
 		const modal = new MediaSearchModal(this.app, this.mediaService, "movie");
 
 		const picked = await modal.openAndGetChoice();
@@ -224,5 +227,36 @@ export class Chronicle extends Plugin
 			template_path : template_path,
 			file_path: file_path
 		}
+	}
+
+	private ensureSettings(mode: string)
+	{
+		const results = this.settingsService.validate(mode);
+
+		if(!results.valid)
+		{
+			this.openSettings();
+			return false;
+		}
+
+		return true;
+	}
+
+	private openSettings()
+	{
+		// This is a work around to access via private API
+		// Public API alternative is to just show a Notice
+		type ObsidianAppWithSettings = App & {
+			setting: {
+				open(): void;
+				openTabById(id: string): void;
+			};
+		};
+
+
+		const settingsApp = this.app as ObsidianAppWithSettings;
+		settingsApp.setting.open();
+
+		settingsApp.setting.openTabById(this.manifest.id);
 	}
 }

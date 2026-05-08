@@ -1,11 +1,12 @@
 import { Events, EventRef } from "obsidian";
+import { ValidationResult, SettingsValidator } from "obsidianx/models/SettingsValidation";
 
 export class SettingsService<T>
 {
 	private current: Readonly<T>;
 	private events = new Events();
 
-	constructor(settings: T)
+	constructor(settings: T, private validator?: SettingsValidator<T>)
 	{
 		this.current = Object.freeze({ ...settings  })
 	}
@@ -37,5 +38,20 @@ export class SettingsService<T>
 	off(ref: EventRef)
 	{
 		this.events.offref(ref);
+	}
+
+	validate(mode?: string): ValidationResult
+	{
+		if(this.validator)
+		{
+			return this.validator(this.current, mode)
+		}
+		else
+		{
+			return {
+				valid: true,
+				errors: []
+			}
+		}
 	}
 }
