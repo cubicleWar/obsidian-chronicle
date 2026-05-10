@@ -91,3 +91,7 @@
 	border: 2px solid var(--text-error);
 	color: var(--text-error);
 }
+
+.hidden {
+	display: none;
+}

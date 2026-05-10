@@ -47,9 +47,10 @@ export class ChronicleSettingTab extends PluginSettingTab
 		{
 			if(!containerEl) return;
 
-			this.statusElement = containerEl.createDiv({cls: "settings-error"});
+			this.statusElement = containerEl.createDiv({cls: ["settings-error", "hidden"]});
 		}
 
+		this.statusElement.toggleClass("hidden", true)
 		this.statusElement.empty();
 
 		const validation = settingsValidator(this.plugin.settings);
@@ -62,7 +63,9 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 			if (errors.length)
 			{
+				this.statusElement.toggleClass("hidden", false)
 				const ul = this.statusElement.createEl("ul");
+
 				for (const error of errors)
 				{
 					ul.createEl("li", { text: error });

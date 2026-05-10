@@ -74,7 +74,7 @@ export class Chronicle extends Plugin
 				if(paths !== null)
 				{
 					const { template_path, file_path } = paths
-					const watch_date = { "watch_dates" : [getCurrentIsoDate()]}
+					const watch_date = { "watch_dates" : picked.mark_watched ? [getCurrentIsoDate()] : []}
 
 					const file_reference = await this.note_manager.createOrUpdateNote(movie, template_path, file_path, watch_date)
 
@@ -88,7 +88,6 @@ export class Chronicle extends Plugin
 
 	async addOrUpdateSeriesSeason()
 	{
-		const watch_date = { "watch_dates" : [getCurrentIsoDate()]}
 		const modal = new MediaSearchModal(this.app, this.mediaService, "series");
 		const picked = await modal.openAndGetChoice();
 
@@ -96,6 +95,7 @@ export class Chronicle extends Plugin
 		{
 			// Get the season in detail
 			const series = await this.mediaService.get("series", picked.item)
+			const watch_date = { "watch_dates" : picked.mark_watched ? [getCurrentIsoDate()] : []}
 
 			// Get the season details
 			if(series !== null)

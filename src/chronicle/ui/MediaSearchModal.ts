@@ -19,6 +19,7 @@ export class MediaSearchModal extends Modal
 	private settled = false;
 
 	private query: string = "";
+	private mark_watched: boolean = true;
 
 	private titleInput?: TextComponent;
 	private resultsEl?: HTMLElement;
@@ -55,7 +56,19 @@ export class MediaSearchModal extends Modal
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", { text: "Chronicle Movie Viewing" });
+		contentEl.createEl("h2", { text: `Chronicle a ${this.mode}` });
+
+		new Setting(contentEl)
+
+			.setName("Mark as watched")
+			.setDesc("Add a watched date when creating or updating the movie note.")
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.mark_watched)
+					.onChange((value) => {
+						this.mark_watched = value;
+					});
+			});
 
 		// Title input
 		new Setting(contentEl)
@@ -216,7 +229,8 @@ export class MediaSearchModal extends Modal
 				this.settle({
 					type: this.mode,
 					query: this.query.trim(),
-					item: r
+					item: r,
+					mark_watched: this.mark_watched
 				});
 			};
 
