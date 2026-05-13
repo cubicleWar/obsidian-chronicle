@@ -17,7 +17,5 @@ export const DEFAULT_SETTINGS : ChronicleSettings = {
 	miniseries_output_path: 'Miniseries',
 
 	save_artwork_locally: true,
-	artwork_output_path: '',
-
-	plot_length: 'short',
+	artwork_output_path: ''
 }

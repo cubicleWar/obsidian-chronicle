@@ -1,10 +1,10 @@
 {
-  "id": "obsidian-chronicle",
+  "id": "chronicle",
   "name": "Chronicle",
-  "version": "0.0.1",
-  "minAppVersion": "1.0.0",
-  "description": "A short description.",
-  "author": "Your Name",
-  "authorUrl": "https://example.com",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.3",
+  "description": "Chronicle your life through the stories you watch and read.",
+  "author": "Trevor Walker",
+  "authorUrl": "https://trevorwalker.xyz",
   "isDesktopOnly": false
 }

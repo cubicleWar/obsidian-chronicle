@@ -150,8 +150,6 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 	displayGeneralSettings(containerEl: HTMLElement)
 	{
-		new Setting(containerEl).setName("General").setHeading();
-
 		new Setting(containerEl)
 			.setName('Export reference templates')
 			.setDesc('Save reference templates for all media types in the root of your vault for customize and/or relocate and use.')
