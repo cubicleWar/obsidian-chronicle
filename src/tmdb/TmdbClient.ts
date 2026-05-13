@@ -128,7 +128,7 @@ export class TmdbClient
 		if (!res.ok)
 		{
 			const text = await res.text().catch(() => '');
-			console.log(`TMDb ${res.status} ${res.statusText} for ${url.pathname}: ${text}`)
+			console.error(`TMDb ${res.status} ${res.statusText} for ${url.pathname}: ${text}`)
 
 			return null;
 		}

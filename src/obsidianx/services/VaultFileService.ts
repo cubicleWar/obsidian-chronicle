@@ -51,7 +51,6 @@ export class VaultFileService
 
 		if (!trimmedUrl)
 		{
-			console.log("addFileFromUrl: url is empty")
 			return;
 		}
 
@@ -73,8 +72,8 @@ export class VaultFileService
 			return null;
 		}
 
-		// Vault-relative path; add .md if missing
-		const path = raw.toLowerCase().endsWith(".md") ? raw : `${raw}.md`;
+		// Vault-relative path; add .md if no extension is specified
+		const path = /\.[^./\\]+$/.test(raw) ? raw : `${raw}.md`;
 
 		const af = this.vault.getAbstractFileByPath(path);
 

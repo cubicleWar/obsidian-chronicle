@@ -31,7 +31,6 @@ export class Chronicle extends Plugin
 
 	async onload()
 	{
-		console.log("Obsidian Chronicle Loaded");
 		await this.loadSettings();
 
 		this.fileService = new VaultFileService(this.app, this.app.vault);
@@ -40,13 +39,13 @@ export class Chronicle extends Plugin
 
 		this.addCommand({
 			id: "chronicle-movie-search",
-			name: "Chronicle Movie",
+			name: "Movie",
 			callback: async () => this.addOrUpdateMovie()
 		});
 
 		this.addCommand({
 			id: "chronicle-series-search",
-			name: "Chronicle TV Series",
+			name: "TV Series",
 			callback: async () => this.addOrUpdateSeriesSeason()
 		});
 
@@ -169,7 +168,7 @@ export class Chronicle extends Plugin
 
 	onunload()
 	{
-		console.log("Obsidian Chronicle Unloaded");
+
 	}
 
 	async loadSettings()
