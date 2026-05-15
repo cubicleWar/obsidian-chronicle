@@ -35,6 +35,6 @@
 		"build:dev": "node esbuild.config.mjs",
 		"build": "node esbuild.config.mjs production",
 		"check": "tsc -p tsconfig.json --noEmit && npm run lint",
-		"build:release": "npm run typecheck && npm run build"
+		"build:release": "npm run check && npm run build"
 	}
 }
