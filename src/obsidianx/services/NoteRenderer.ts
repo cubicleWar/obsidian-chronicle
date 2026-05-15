@@ -1,7 +1,11 @@
 import Handlebars from "handlebars";
 import { VaultFileService } from "./VaultFileService.js";
+import { RecordLike } from "utilities/models/types.js";
+import { isRecordLike } from "utilities/models/typeguards.js";
 
-export class NoteRenderer<T>
+type HandlebarsTemplateDelegate<TContext = unknown> = Handlebars.TemplateDelegate<TContext>;
+
+export class NoteRenderer<T extends object>
 {
 	private static template_cache = new Map<string, HandlebarsTemplateDelegate>()
 	private _template: HandlebarsTemplateDelegate | null = null;
@@ -41,12 +45,10 @@ export class NoteRenderer<T>
 	async render(model: T) : Promise<string>
 	{
 		const template = await this.getTemplate();
-		const data: any = this.cleanRender(model);
+		const data: RecordLike = this.cleanRender(model);
 
 		if(template !== null)
 		{
-			const data: any = this.cleanRender(model);
-
 			return template(data);
 		}
 		else
@@ -55,9 +57,9 @@ export class NoteRenderer<T>
 		}
 	}
 
-	private cleanRender(source: any) : any
+	private cleanRender(source: object) : RecordLike
 	{
-		let data : any = {}
+		let data : RecordLike = {}
 
 		for(const [key, value] of Object.entries(source))
 		{
@@ -73,7 +75,7 @@ export class NoteRenderer<T>
 			{
 				data[key] = value.filter(x => !!x).join(", ");
 			}
-			else if(typeof value === 'object')
+			else if(isRecordLike(value))
 			{
 				data[key] = this.cleanRender(value);
 			}

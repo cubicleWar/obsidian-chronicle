@@ -1,6 +1,7 @@
 import { PrimitiveValue, RecordLike } from "utilities/models/types.js";
-import { isMeaningfulValue, isPlainObject, isPrimitiveArray, isObjectArray } from "utilities/models/typeguards.js";
+import { isMeaningfulValue, isRecordLike, isPrimitiveArray, isObjectArray } from "utilities/models/typeguards.js";
 import { ObjectSignature, compareSignatures, FingerprintFn } from "./fingerprint.js";
+
 
 //
 // Merges multiple objects from left to right using the existing pairwise merge logic.
@@ -11,9 +12,9 @@ import { ObjectSignature, compareSignatures, FingerprintFn } from "./fingerprint
 // is equivalent to:
 // mergeObjectsPair(mergeObjectsPair(a, b, fingerprint), c, fingerprint)
 //
-export function mergeObjects<T extends RecordLike>(
+export function mergeObjects<T extends object>(
 	items: T[],
-	fingerprint: FingerprintFn,
+	fingerprint: FingerprintFn<RecordLike>,
 	getCompletenessScore?: (item: T) => number
 ): T | null {
 	if (items.length === 0)
@@ -48,10 +49,18 @@ export function mergeObjects<T extends RecordLike>(
 	return result;
 }
 
-function mergeObjectPair<T extends RecordLike>(a: T, b: Partial<T>, fingerprint: FingerprintFn, path: string[] = []): T
+function mergeObjectPair<T extends object>(
+	a: T,
+	b: Partial<T>,
+	fingerprint: FingerprintFn<RecordLike>,
+	path: string[] = []
+): T
 {
-	const result: RecordLike = { ...a };
-	const keys = new Set([...Object.keys(a), ...Object.keys(b as RecordLike)]);
+	const result: RecordLike = { ...(a as RecordLike) };
+	const keys = new Set([
+		...Object.keys(a),
+		...Object.keys(b)
+	]);
 
 	for (const key of keys)
 	{
@@ -61,23 +70,24 @@ function mergeObjectPair<T extends RecordLike>(a: T, b: Partial<T>, fingerprint:
 
 		if (Array.isArray(left) && Array.isArray(right))
 		{
-			const combined = [...left, ...right];
+			const leftArray: unknown[] = left;
+			const rightArray: unknown[] = right;
 
-			if (isObjectArray(left) && isObjectArray(right))
+			if (isObjectArray(leftArray) && isObjectArray(rightArray))
 			{
-				result[key] = uniqueObjectsBySignature(combined, fingerprint, nextPath)
+				result[key] = uniqueObjectsBySignature([...leftArray, ...rightArray], fingerprint, nextPath);
 			}
-			else if (isPrimitiveArray(left) && isPrimitiveArray(right))
+			else if (isPrimitiveArray(leftArray) && isPrimitiveArray(rightArray))
 			{
-				result[key] = uniquePrimitives(combined);
+				result[key] = uniquePrimitives([...leftArray, ...rightArray]);
 			}
 			else
 			{
 				// Mismatched array types - return the combination
-				result[key] = combined;
+				result[key] = [...leftArray, ...rightArray];
 			}
 		}
-		else if(isPlainObject(left) && isPlainObject(right))
+		else if(isRecordLike(left) && isRecordLike(right))
 		{
 			result[key] = mergeObjectPair(left, right, fingerprint, nextPath);
 		}
@@ -90,12 +100,12 @@ function mergeObjectPair<T extends RecordLike>(a: T, b: Partial<T>, fingerprint:
 	return result as T;
 }
 
-function uniqueObjectsBySignature(
-	items: RecordLike[],
-	fingerprint: FingerprintFn,
+function uniqueObjectsBySignature<T extends RecordLike>(
+	items: T[],
+	fingerprint: FingerprintFn<RecordLike>,
 	path: string[]
-): RecordLike[] {
-	const merged: Array<{ item: RecordLike; signature: ObjectSignature }> = [];
+): T[] {
+	const merged: Array<{ item: T; signature: ObjectSignature }> = [];
 
 	for (const item of items)
 	{
@@ -132,7 +142,7 @@ function uniquePrimitives<T extends PrimitiveValue>(values: T[]): T[]
 }
 
 // Returns the best value, biasing a over b
-function mergePrimitive(a: PrimitiveValue, b: PrimitiveValue) : PrimitiveValue
+function mergePrimitive(a: unknown, b: unknown) : unknown
 {
 	if(isMeaningfulValue(a))
 	{

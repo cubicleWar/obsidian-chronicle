@@ -1,4 +1,3 @@
-import { SeriesSeasonSummary } from "./SeriesSeason";
 import { ProductionStatus } from "./ProductionStatus";
 import { ArtworkOwner } from "./ArtworkOwner";
 import { SeriesEpisode } from "./SeriesEpisode";

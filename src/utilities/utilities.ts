@@ -1,15 +1,9 @@
-import { RecordLike } from "./models/types.js";
-
-/** -----------------------
- *  Small utilities
- *  ----------------------*/
-
-export function toIntOrNull(x: any)
+export function toIntOrNull(x: unknown) : number | null
 {
 	return toIntOrY(x, null);
 }
 
-export function toIntOrY(x: any, y: any)
+export function toIntOrY<T>(x: unknown, y: T) : number | T
 {
 	const n = Number(x);
 	return Number.isFinite(n) ? n : y;
@@ -31,49 +25,25 @@ export function safeArraySplit(s: string)
 //
 export function normalizeText(value: unknown): string
 {
-	if (value == null)
+	if(typeof value === 'string')
 	{
-		return "";
-	}
-
-	return String(value)
-		.trim()
-		.toLowerCase()
-		.normalize("NFKD")
-		.replace(/[\u0300-\u036f]/g, "")
-		.replace(/[^\p{L}\p{N}]+/gu, " ")
-		.replace(/\s+/g, " ")
-		.trim();
-}
-
-// Returns the first field from an array of field names that is present in an object and
-// has a valid value
-export function firstNonEmpty(obj: Record<string, unknown>, fields: string[], transform?: (v: unknown) => string): string
-{
-	for (const field of fields)
-	{
-		if (!(field in obj))
-		{
-			continue;
-		}
-
-		const raw = obj[field];
-		const value = transform ? transform(raw) : normalizeText(raw);
-
-		if (value)
-		{
-			return value;
-		}
+		return String(value)
+			.trim()
+			.toLowerCase()
+			.normalize("NFKD")
+			.replace(/[\u0300-\u036f]/g, "")
+			.replace(/[^\p{L}\p{N}]+/gu, " ")
+			.replace(/\s+/g, " ")
+			.trim();
 	}
 
 	return "";
 }
 
-
 //
 // Returns the first usable normalized value from the provided fields.
 //
-export function firstMatchingValue(obj: RecordLike, fields: string[], transform: (value: unknown) => string = normalizeText): string
+export function firstMatchingValue<T extends object>(obj: T, fields: Array<keyof T>, transform: (value: unknown) => string = normalizeText): string
 {
 	for (const field of fields)
 	{

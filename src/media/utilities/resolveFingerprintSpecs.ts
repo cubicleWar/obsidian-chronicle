@@ -3,7 +3,7 @@ import { RecordLike } from "utilities/models/types.js";
 import { extractYear } from "utilities/time.js";
 
 
-export function resolveFingerprintSpecs(obj: RecordLike, path: string[]): KeySpec[]
+export function resolveFingerprintSpecs(obj: RecordLike, path: string[]): KeySpec<RecordLike>[]
 {
 	const pathKey = path.join(".");
 
@@ -23,8 +23,16 @@ export function resolveFingerprintSpecs(obj: RecordLike, path: string[]): KeySpe
 				group: "semantic",
 				prefix: "semantic",
 				parts: [
-					{ fields: ['title'], required: true },
-					{ fields: ['year', 'released', 'air_date'], transform: extractYear, label: 'year', required: true },
+					{
+						fields: ['title'],
+						required: true
+					},
+					{
+						fields: ['year', 'released', 'air_date'],
+						transform: extractYear,
+						label: 'year',
+						required: true
+					}
 				],
 			},
 		];

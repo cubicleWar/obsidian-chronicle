@@ -23,7 +23,6 @@ function parseIsoDate(iso: string): [number, number, number]
 export function getCurrentIsoDate() : string
 {
 	let d = new Date()
-	d.toISOString().split('T')[0]
 
 	const offset = d.getTimezoneOffset()
 	d = new Date(d.getTime() - (offset*60*1000))
@@ -32,8 +31,11 @@ export function getCurrentIsoDate() : string
 }
 
 // Formats an ISO date of the form yyy-mm-dd into a date string based on the options
-export function formatDate(isoDate: string, locale: string = "en-GB", options? : any)
-{
+export function formatDate(
+	isoDate: string,
+	locale: string = "en-GB",
+	options? : Intl.DateTimeFormatOptions
+){
 	if(!options)
 	{
 		options = {

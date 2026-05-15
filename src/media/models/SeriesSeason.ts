@@ -1,6 +1,4 @@
-import { StringValue } from "obsidian";
 import { SeriesEpisode } from "./SeriesEpisode";
-
 
 export interface SeriesSeasonSummary
 {

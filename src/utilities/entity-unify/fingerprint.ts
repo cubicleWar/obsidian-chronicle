@@ -1,23 +1,22 @@
-import { RecordLike } from "utilities/models/types.js";
 import { normalizeText, firstMatchingValue } from '../utilities.js';
 
-export type FingerprintFn = (obj: RecordLike, path: string[]) => ObjectSignature;
-type KeySpecResolver = (obj: RecordLike, path: string[]) => KeySpec[];
+export type FingerprintFn<T extends object> = (obj: T, path: string[]) => ObjectSignature;
+type KeySpecResolver<T extends object> = (obj: T, path: string[]) => KeySpec<T>[];
 
-interface KeyPartSpec
+interface KeyPartSpec<T extends object>
 {
-	fields: string[];							// The fields to look for sequentially to provide a value for the key generation
+	fields: Array<keyof T>;						// The fields to look for sequentially to provide a value for the key generation
 	transform?: (value: unknown) => string;		// A function to normalise the field value
 	label?: string;								// A label to use in place of the field name to alias fields e.g. original_title => title
 	required?: boolean;							// Whether this spec is mandatory in developing a key
 }
 
-export interface KeySpec
+export interface KeySpec<T extends object>
 {
 	group: "strong" | "semantic" | "weak" | "nestedStrong";
 	prefix: string;								// The prefix to use for the key e.g. semantic
 	mode?: "combined" | "per-field";			// Whether to generate a key per field (recommended for strong keys) or compound keys
-	parts: KeyPartSpec[];							// Specifications on how to build each comparison key
+	parts: KeyPartSpec<T>[];							// Specifications on how to build each comparison key
 	separator?: string;							// The string used to separate fields
 	includeLabels?: boolean;					// Prefix values with the labels or their field names
 	allowPartial?: boolean;						// Allows a key can be generated even if some required parts are missing
@@ -91,7 +90,7 @@ interface SignatureMatch
 // - missing required parts prevent a combined key from being generated
 // - duplicate keys are removed
 //
-function generateKeys(obj: RecordLike, specs: KeySpec[]): Record<string, string[]>
+function generateKeys<T extends object>(obj: T, specs: KeySpec<T>[]): Record<string, string[]>
 {
 	const grouped = new Map<string, Set<string>>();
 
@@ -123,10 +122,8 @@ function generateKeys(obj: RecordLike, specs: KeySpec[]): Record<string, string[
 					const value = transform(obj[field]);
 					if (!value) continue;
 
-					const piece =
-						includeLabels || part.label
-							? `${part.label ?? field}:${value}`
-							: `${field}:${value}`;
+					const label = includeLabels && part.label ? part.label : String(field)
+					const piece = `${label}:${value}`;
 
 					bucket.add(`${spec.prefix}:${piece}`);
 				}
@@ -199,7 +196,7 @@ export function compareSignatures(a: ObjectSignature, b: ObjectSignature): Signa
 	};
 }
 
-function createObjectSignature(obj: RecordLike, path: string[], resolveKeySpecs: KeySpecResolver): ObjectSignature
+function createObjectSignature<T extends object>(obj: T, path: string[], resolveKeySpecs: KeySpecResolver<T>): ObjectSignature
 {
 	const specs = resolveKeySpecs(obj, path);
 	const keyGroups = generateKeys(obj, specs);
@@ -220,7 +217,7 @@ function createObjectSignature(obj: RecordLike, path: string[], resolveKeySpecs:
 	};
 }
 
-export function makeFingerprint(resolveKeySpecs: KeySpecResolver): FingerprintFn
+export function makeFingerprint<T extends object>(resolveKeySpecs: KeySpecResolver<T>): FingerprintFn<T>
 {
 	return (obj, path) => createObjectSignature(obj, path, resolveKeySpecs);
 }

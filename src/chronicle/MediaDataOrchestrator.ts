@@ -10,6 +10,14 @@ import { ChronicleSettings } from "./settings/ChronicleSettings.js";
 import { SettingsService } from "obsidianx/services/Settings.service.js";
 import { EventRef } from "obsidian";
 import { TmdbClient } from "tmdb/TmdbClient.js";
+import { OmdbMovie } from "omdb/models/OmdbMovie.js";
+import { OmdbSearchResult } from "omdb/models/OmdbSearchResult.js";
+import { OmdbSeries } from "omdb/models/OmdbSeries.js";
+import { OmdbSeriesSeason } from "omdb/models/OmdbSeriesSeason.js";
+import { TmdbMovie } from "tmdb/models/TmdbMovie.js";
+import { TmdbSearchResult } from "tmdb/models/TmdbSearchResult.js";
+import { TmdbSeries } from "tmdb/models/TmdbSeries.js";
+import { TmdbSeriesSeason } from "tmdb/models/TmdbSeriesSeason.js";
 import { SeriesSeason } from "media/models/SeriesSeason.js";
 import { mergeObjects } from "utilities/entity-unify/merge.js";
 import { resolveFingerprintSpecs } from "media/utilities/resolveFingerprintSpecs.js"
@@ -18,21 +26,21 @@ import { makeFingerprint } from "utilities/entity-unify/fingerprint.js"
 type ClientSet = {
 	id_name: "imdb_id" | "tmdb_id",
 	search: {
-		get: (search_str: string, type: MediaType) => any,
-		normalize: (data: any) => SearchResult[]
+		get: (search_str: string, type: MediaType) => Promise<unknown[]>,
+		normalize: (data: unknown[]) => SearchResult[]
 	},
-	find: (type: MediaType, item: SearchResult) => any | null,
+	find: (type: MediaType, item: SearchResult) => Promise<unknown>,
 	movie: {
-		get: (id: string) => any,
-		normalize: (data: any, artwork: string) => Movie
+		get: (id: string) => Promise<unknown>,
+		normalize: (data: unknown, artwork: string) => Movie
 	},
 	series: {
-		get: (id: string) => any,
-		normalize: (data: any, artwork: string) => Series
+		get: (id: string) => Promise<unknown>,
+		normalize: (data: unknown, artwork: string) => Series
 	}
 	season: {
-		get: (id: string, season: number) => any
-		normalize: (series: Series, data: any) => SeriesSeason
+		get: (id: string, season: number) => Promise<unknown>
+		normalize: (series: Series, data: unknown) => SeriesSeason
 	}
 }
 
@@ -61,7 +69,8 @@ export class MediaDataOrchestrator
 
 		if(sets.length > 0)
 		{
-			const set = <ClientSet>sets[0];
+			const set = sets[0];
+			if (!set) return [];
 
 			const results = await set.search.get(search_str, type);
 
@@ -75,7 +84,7 @@ export class MediaDataOrchestrator
 	async get(type: "series", item: SearchResult): Promise<Series | null>;
 	async get(type: "movie" | "series", item: SearchResult) : Promise<Movie | Series | null>
 	{
-		const clients : ClientSet[] = this.getClients(type);
+		const clients = this.getClients(type);
 		let results = [];
 
 		for(const clientSet of clients)
@@ -90,7 +99,7 @@ export class MediaDataOrchestrator
 			}
 		}
 
-		return mergeObjects<any>(results, makeFingerprint(resolveFingerprintSpecs));
+		return mergeObjects<Movie | Series>(results, makeFingerprint(resolveFingerprintSpecs));
 	}
 
 	async getSeriesSeason(series: Series, season_no: number) : Promise<SeriesSeason | null>
@@ -114,7 +123,10 @@ export class MediaDataOrchestrator
 			}
 		}
 
-		return mergeObjects<any>(results, makeFingerprint(resolveFingerprintSpecs));
+		return mergeObjects<SeriesSeason>(
+			results,
+			makeFingerprint(resolveFingerprintSpecs)
+		);
 	}
 
 	// Merges together series and season data to form a Miniseries
@@ -195,19 +207,19 @@ export class MediaDataOrchestrator
 				find: omdb.find.bind(omdb),
 				search: {
 					get: omdb.search.bind(omdb),
-					normalize: OmdbNormalizer.getSearchResults
+					normalize: (data) => OmdbNormalizer.getSearchResults(data as OmdbSearchResult[])
 				},
 				movie: {
 					get: omdb.getMovie.bind(omdb),
-					normalize: OmdbNormalizer.getMovie
+					normalize: (data, artwork) => OmdbNormalizer.getMovie(data as OmdbMovie, artwork)
 				},
 				series: {
 					get: omdb.getSeries.bind(omdb),
-					normalize: OmdbNormalizer.getSeries
+					normalize: (data, artwork) => OmdbNormalizer.getSeries(data as OmdbSeries, artwork)
 				},
 				season: {
 					get: omdb.getSeriesSeason.bind(omdb),
-					normalize: OmdbNormalizer.getSeriesSeason
+					normalize: (series, data) => OmdbNormalizer.getSeriesSeason(series, data as OmdbSeriesSeason)
 				}
 			}
 		}
@@ -221,19 +233,19 @@ export class MediaDataOrchestrator
 				find: tmdb.find.bind(tmdb),
 				search: {
 					get: tmdb.search.bind(tmdb),
-					normalize: TmdbNormalizer.getSearchResults
+					normalize: (data) => TmdbNormalizer.getSearchResults(data as TmdbSearchResult[])
 				},
 				movie: {
 					get: tmdb.getMovie.bind(tmdb),
-					normalize: TmdbNormalizer.getMovie
+					normalize: (data, artwork) => TmdbNormalizer.getMovie(data as TmdbMovie, artwork)
 				},
 				series: {
 					get: tmdb.getSeries.bind(tmdb),
-					normalize: TmdbNormalizer.getSeries
+					normalize: (data, artwork) => TmdbNormalizer.getSeries(data as TmdbSeries, artwork)
 				},
 				season: {
 					get: tmdb.getSeriesSeason.bind(tmdb),
-					normalize: TmdbNormalizer.getSeriesSeason
+					normalize: (series, data) => TmdbNormalizer.getSeriesSeason(series, data as TmdbSeriesSeason)
 				}
 			}
 		}

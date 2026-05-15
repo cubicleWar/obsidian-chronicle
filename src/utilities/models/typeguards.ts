@@ -1,28 +1,22 @@
-import { PrimitiveValue, JsonPrimitive, RecordLike } from "./types.js";
+import { PrimitiveValue, RecordLike } from "./types.js";
 
-export function isMeaningfulValue(value: any): boolean
+export function isMeaningfulValue(value: unknown): boolean
 {
 	return value !== null && value !== undefined && value !== "" && value !== "N/A";
 }
 
-export function isPlainObject(value: any): value is Record<string, any>
-{
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function isPrimitive(value: unknown): value is PrimitiveValue
-{
-	return value === null || (typeof value !== "object" && typeof value !== "function");
-}
-
-export function isJsonPrimitive(value: unknown): value is JsonPrimitive
+export function isRecordLike(value: unknown): value is RecordLike
 {
 	return (
-		value === null ||
-		typeof value === "string" ||
-		typeof value === "number" ||
-		typeof value === "boolean"
+		typeof value === "object" &&
+		value !== null &&
+		!Array.isArray(value)
 	);
+}
+
+function isPrimitive(value: unknown): value is PrimitiveValue
+{
+	return value === null || (typeof value !== "object" && typeof value !== "function");
 }
 
 export function isPrimitiveArray(values: unknown[]): values is PrimitiveValue[]

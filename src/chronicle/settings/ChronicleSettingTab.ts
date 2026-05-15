@@ -1,8 +1,8 @@
 import { App, PluginSettingTab, Setting, SearchComponent} from "obsidian";
 import { Chronicle } from "../Chronicle";
-import { FolderSuggestor } from "obsidianx/ui/FolderSuggestor.js";
-import { FileSuggestor } from "obsidianx/ui/FileSuggestor.js";
 import { StringKeys, ObjectKeys } from "utilities/models/types.js";
+import { FolderSuggest } from "obsidianx/ui/FolderSuggest.js";
+import { FileSuggest } from "obsidianx/ui/FileSuggest.js";
 
 // Default templates
 import { MOVIE_TEMPLATE } from "../templates/MovieTemplate.js";
@@ -76,29 +76,29 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 	displayApiSettings(containerEl: HTMLElement)
 	{
-		new Setting(containerEl).setName("API Access").setHeading();
+		new Setting(containerEl).setName("Data services").setHeading();
 
-		const omdb_setting = new Setting(containerEl)
-			.setName('OMDb API key')
-			.setDesc('Your API key to access Open Movie Database.')
+		new Setting(containerEl)
+			.setName('Omdb API key')
+			.setDesc('Your API key to access the open movie database.')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.plugin.settings.omdb_api_key)
-				.onChange(async (value) => this.updateSetting('omdb_api_key', value))
+				.onChange((value) => {
+					void this.updateSetting('omdb_api_key', value);
+				})
 			);
 
-		omdb_setting.settingEl.addClass("stacked-setting");
-
-		const tmdb_setting = new Setting(containerEl)
-			.setName('TMDB API key')
-			.setDesc('Your API key to access The Movie Database.')
+		new Setting(containerEl)
+			.setName('Tmdb API key')
+			.setDesc('Your API key to access the movie database.')
 			.addTextArea(text => text
 				.setPlaceholder('')
 				.setValue(this.plugin.settings.tmdb_api_key)
-				.onChange(async (value) => this.updateSetting('tmdb_api_key', value))
+				.onChange((value) => {
+					void this.updateSetting('tmdb_api_key', value);
+				})
 			);
-
-		tmdb_setting.settingEl.addClass("stacked-setting");
 	}
 
 	displayMovieSettings(containerEl: HTMLElement)
@@ -133,11 +133,11 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('Differentiate miniseries')
-			.setDesc('Treat Miniseries as a distinct format from regular Series and Seasons, complete with its own template and note location.')
+			.setDesc('Treat miniseries as a distinct format from regular series and seasons, complete with its own template and note location.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.differentiate_miniseries)
-				.onChange(async (value) => {
-					this.updateSetting('differentiate_miniseries', value);
+				.onChange((value) => {
+					void this.updateSetting('differentiate_miniseries', value);
 					setVisibility();
 				}));
 
@@ -155,8 +155,8 @@ export class ChronicleSettingTab extends PluginSettingTab
 			.setDesc('Save reference templates for all media types in the root of your vault for customize and/or relocate and use.')
 			.addButton(btn => btn
 				.setButtonText("Export templates")
-				.onClick((event) => {
-					this.saveTemplates();
+				.onClick(() => {
+					void this.saveTemplates();
 				}));
 
 		new Setting(containerEl)
@@ -164,7 +164,9 @@ export class ChronicleSettingTab extends PluginSettingTab
 			.setDesc('Automatically open of notes created or updated when chronicling media.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.switch_to_created_note)
-				.onChange(async (value) => this.updateSetting('switch_to_created_note', value))
+				.onChange((value) => {
+					void this.updateSetting('switch_to_created_note', value);
+				})
 			);
 
 
@@ -174,10 +176,9 @@ export class ChronicleSettingTab extends PluginSettingTab
 			.setDesc('Save artwork such as the movie posters locally to your vault when chronicling new media.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.save_artwork_locally)
-				.onChange(async value => {
-					this.updateSetting('save_artwork_locally', value)
-
-					this.toggleSettingVisibility(artwork_setting, !this.plugin.settings.save_artwork_locally)
+				.onChange((value) => {
+					void this.updateSetting('save_artwork_locally', value)
+					this.toggleSettingVisibility(artwork_setting, !value)
 				}),
 			);
 
@@ -188,7 +189,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 	}
 
 	// Export the example templates
-	private async saveTemplates()
+	private async saveTemplates() : Promise<void>
 	{
 		const templates = [
 			MOVIE_TEMPLATE,
@@ -211,35 +212,31 @@ export class ChronicleSettingTab extends PluginSettingTab
 		name: string,
 		description: string,
 		placeholder: string = "",
-		suggestor: "file" | "folder" | null = null,
-		refesh_on_update: boolean = false
+		type: "file" | "folder" | null = null,
+		refesh_on_update: boolean = false,
+		extension: string = '.md'
 	) : Setting {
+
 		const setting = new Setting(containerEl)
 			.setName(name)
-			.setDesc(description);
+			.setDesc(description)
+			.addSearch((search: SearchComponent) => {
+				search
+					.setPlaceholder(placeholder)
+					.setValue(String(this.plugin.settings[setting_name]))
+					.onChange((value) => {
+						void this.updateSetting(setting_name, value, refesh_on_update);
+					});
 
-		setting.settingEl.addClass("stacked-setting");
-
-		const fieldRow = setting.settingEl.createDiv({ cls: "stacked-setting-field" });
-
-		const search = new SearchComponent(fieldRow);
-
-		search
-			.setPlaceholder(placeholder)
-			.setValue(String(this.plugin.settings[setting_name]))
-			.onChange(async (value) => this.updateSetting(setting_name, value, refesh_on_update));
-
-		if(suggestor === "file")
-		{
-			new FileSuggestor(search.inputEl, this.plugin.app);
-		}
-		else if(suggestor === "folder")
-		{
-			new FolderSuggestor(search.inputEl, this.plugin.app)
-		}
-
-		search.inputEl.addClass("stacked-search-input");
-		search.inputEl.addClass("stacked-search-wrapper");
+				if (type === "folder")
+				{
+					new FolderSuggest(this.app, search.inputEl);
+				}
+				else
+				{
+					new FileSuggest(this.app, search.inputEl, extension);
+				}
+			});
 
 		return setting;
 	}
@@ -247,10 +244,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 	// Add this to updateSetting
 	private toggleSettingVisibility(setting: Setting, isDisabled: boolean)
 	{
-		if(setting)
-		{
-			setting.settingEl.toggleClass("is-disabled", isDisabled);
-		}
+		setting.settingEl.toggleClass("is-disabled", isDisabled);
 	}
 
 	private async updateSetting<K extends ObjectKeys<ChronicleSettings>>(

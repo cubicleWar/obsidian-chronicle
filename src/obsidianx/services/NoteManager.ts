@@ -8,7 +8,7 @@ export class NoteManager
 	constructor(private file_service: VaultFileService) {}
 
 	// Saves a given note or adds a new watch date if the note already exists
-	async createOrUpdateNote<T>(data: T, template_path: string, output_file_path: string, extra_data?: Dictionary<string | string[]>) : Promise<TFile | null>
+	async createOrUpdateNote<T extends object>(data: T, template_path: string, output_file_path: string, extra_data?: Dictionary<string | string[]>) : Promise<TFile | null>
 	{
 		let note_reference = this.file_service.getTFile(output_file_path);
 

@@ -9,8 +9,9 @@ import { MediaDataOrchestrator } from "./MediaDataOrchestrator.js";
 import { VaultFileService } from "obsidianx/services/VaultFileService.js";
 import { NoteManager } from "obsidianx/services/NoteManager.js"
 import { SettingsService } from "obsidianx/services/Settings.service.js";
-import { slugifyFilename } from "obsidianx/formatters.js";
+import { slugifyFilename } from "obsidianx/helpers/formatters.js";
 
+import { Movie } from "media/models/Movie.js";
 import { Series } from "media/models/Series.js";
 import { SeriesSeason } from "media/models/SeriesSeason.js";
 import { Miniseries } from "media/models/Miniseries.js";
@@ -38,14 +39,14 @@ export class Chronicle extends Plugin
 		this.note_manager = new NoteManager(this.fileService)
 
 		this.addCommand({
-			id: "chronicle-movie-search",
+			id: "movie-search",
 			name: "Movie",
 			callback: async () => this.addOrUpdateMovie()
 		});
 
 		this.addCommand({
-			id: "chronicle-series-search",
-			name: "TV Series",
+			id: "series-search",
+			name: "Series",
 			callback: async () => this.addOrUpdateSeriesSeason()
 		});
 
@@ -75,9 +76,9 @@ export class Chronicle extends Plugin
 					const { template_path, file_path } = paths
 					const watch_date = { "watch_dates" : picked.mark_watched ? [getCurrentIsoDate()] : []}
 
-					const file_reference = await this.note_manager.createOrUpdateNote(movie, template_path, file_path, watch_date)
+					const file_reference = await this.note_manager.createOrUpdateNote<Movie>(movie, template_path, file_path, watch_date)
 
-					this.saveArtwork(movie)
+					void this.saveArtwork(movie)
 
 					this.announceNoteCreation(file_reference, `${movie.title} (${movie.year}) - ${movie.overview}`)
 				}
@@ -103,7 +104,7 @@ export class Chronicle extends Plugin
 				const series_file_name = slugifyFilename(`${series.title}.md`);
 				const isMiniseries = series.miniseries;
 
-				this.saveArtwork(series)
+				void this.saveArtwork(series)
 
 				if(!isMiniseries)
 				{
@@ -196,12 +197,12 @@ export class Chronicle extends Plugin
 	{
 		if(this.settings.switch_to_created_note && note_reference)
 		{
-			this.fileService.openNote(note_reference);
+			void this.fileService.openNote(note_reference);
 		}
 
 		if(msg)
 		{
-			new Notice(`Created New entry: ${msg}`);
+			new Notice(`Created new note: ${msg}`);
 		}
 	}
 

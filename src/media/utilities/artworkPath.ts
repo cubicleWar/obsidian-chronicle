@@ -1,5 +1,5 @@
 import { getExtensionFromUrl } from "utilities/files.js";
-import { slugifyFilename } from "obsidianx/formatters.js";
+import { slugifyFilename } from "obsidianx/helpers/formatters.js";
 
 export function getArtworkLocalPath(title : string, artwork: string | null, imagePath: string) : string
 {

@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Setting, TextComponent } from "obsidian";
+import { App, Modal, Setting, TextComponent } from "obsidian";
 import { MediaDataOrchestrator } from "../MediaDataOrchestrator.js";
 import { SearchResult } from "media/models/SearchResult.js";
 import { MediaType } from "media/models/MediaType.js";
@@ -76,7 +76,7 @@ export class MediaSearchModal extends Modal
 			.setDesc("Type at least 2 characters to search")
 			.addText((t) => {
 				this.titleInput = t;
-				t.setPlaceholder("e.g., Alien")
+				t.setPlaceholder("Alien")
 					.setValue(this.query)
 					.onChange((v) => {
 						this.query = v;
@@ -166,7 +166,7 @@ export class MediaSearchModal extends Modal
 			this.setStatus(`Showing ${results.length} results`);
 			this.renderResults(results);
 		}
-		catch (e: any)
+		catch (e: unknown)
 		{
 			if (seq !== this.requestSeq) return; // stale
 

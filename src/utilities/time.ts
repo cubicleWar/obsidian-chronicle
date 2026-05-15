@@ -3,7 +3,7 @@
 // Extracts the year from a string
 export function extractYear(value: unknown): string
 {
-	if (value == null)
+	if (typeof value !== "string" || typeof value !== "number")
 	{
 		return "";
 	}

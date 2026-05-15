@@ -1,12 +1,13 @@
 import { TmdbMovie } from "tmdb/models/TmdbMovie";
+import { isRecordLike } from "utilities/models/typeguards";
 
-
-export function isTmdbMovie(obj: any): obj is TmdbMovie
+export function isTmdbMovie(obj: unknown): obj is TmdbMovie
 {
+	if(!isRecordLike(obj)) return false;
+
 	return (
-		typeof obj === 'object' &&
 		'id' in obj &&
 		'imdb_id' in obj &&
 		'title' in obj
-	)
+	);
 }

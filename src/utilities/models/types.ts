@@ -1,8 +1,6 @@
-export type RecordLike = Record<string, any>;
+export type RecordLike = Record<string, unknown>;
 
-export type PrimitiveValue = string | number | boolean | bigint | symbol | null | undefined;
-
-export type JsonPrimitive = string | number | boolean | null;
+export type PrimitiveValue = string | number | boolean | null;
 
 export interface Dictionary<T>
 {

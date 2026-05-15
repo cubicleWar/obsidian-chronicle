@@ -1,4 +1,4 @@
-export interface TmdbBaseSearchResult
+interface TmdbBaseSearchResult
 {
 	id: number;
 	adult: boolean;
@@ -13,14 +13,14 @@ export interface TmdbBaseSearchResult
 	vote_count: number;
 }
 
-export interface TmdbSeriesSearchResult extends TmdbBaseSearchResult
+interface TmdbSeriesSearchResult extends TmdbBaseSearchResult
 {
 	name: string;
 	original_name: string;
 	first_air_date: string;
 }
 
-export interface TmdbMovieSearchResult extends TmdbBaseSearchResult
+interface TmdbMovieSearchResult extends TmdbBaseSearchResult
 {
 	title: string;
 	original_title: string;

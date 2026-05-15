@@ -1,12 +1,17 @@
 import { TmdbMovie } from "./models/TmdbMovie.js";
 import { TmdbSeries } from "./models/TmdbSeries.js";
+import { TmdbFindResponse } from "./models/TmdbFindResponse.js";
 import { TmdbSeriesSeason } from "./models/TmdbSeriesSeason.js";
 import { TmdbSearchResponse } from "./models/TmdbSearchResponse";
 import { TmdbSearchResult } from "./models/TmdbSearchResult";
 import { parseTitleAndYear } from "utilities/parseTitleAndYear.js";
 import { TmdbSeriesEpisode } from "./models/TmdbSeriesEpisode.js";
+import { MediaType } from "media/models/MediaType.js";
+import { SearchResult } from "media/models/SearchResult.js";
+import { obsidianGetUrl } from "obsidianx/helpers/urlRequest.js";
 
 type TmdbMedia = TmdbMovie | TmdbSeries | TmdbSeriesEpisode
+type TmdbQuery = Record<string, string | number | null | undefined>;
 
 export class TmdbClient
 {
@@ -24,13 +29,13 @@ export class TmdbClient
 		this.API_KEY = key;
 	}
 
-	async search(search_str: string, type: "movie" | "series" | "episode" | null = null) : Promise<TmdbSearchResult[]>
+	async search(search_str: string, type: MediaType | null = null) : Promise<TmdbSearchResult[]>
 	{
 		const { title, year } = parseTitleAndYear(search_str);
 
-		const path = '/search/' + (type === 'series' ? 'tv' : type);
+		const path = '/search/' + (type === 'series' ? 'tv' : type ?? 'movie');
 
-		const resp: TmdbSearchResponse = await this.request(path, {query: title, year: year})
+		const resp = await this.request<TmdbSearchResponse>(path, {query: title, year: year})
 
 		if(resp === null)
 		{
@@ -42,12 +47,17 @@ export class TmdbClient
 		}
 	}
 
-	async find(type: "movie" | "series" | "episode", item: any) : Promise<TmdbMedia | null>
+	async find(type: MediaType, item: SearchResult) : Promise<TmdbMedia | null>
 	{
 		if(item.imdb_id)
 		{
 			const path = `/find/${item.imdb_id}`;
-			const resp = await this.request(path, {external_source: "imdb_id"})
+			const resp = await this.request<TmdbFindResponse>(path, {external_source: "imdb_id"})
+
+			if(resp === null)
+			{
+				return null;
+			}
 
 			const tmdb_id = type === "movie" ? resp.movie_results?.[0]?.id : resp.tv_results?.[0]?.id;
 
@@ -77,9 +87,7 @@ export class TmdbClient
 	{
 		const path = `/movie/${id}`;
 
-		const details : TmdbMovie = await this.request(path, {append_to_response: 'credits'});
-
-		return details;
+		return this.request<TmdbMovie>(path, {append_to_response: 'credits'});
 	}
 
 	async getSeries(id: number | string) : Promise<TmdbSeries | null>
@@ -87,53 +95,30 @@ export class TmdbClient
 		const path = `/tv/${id}`;
 
 		// Get the series
-		const details : TmdbSeries = await this.request(path);
-
-		return details;
+		return this.request<TmdbSeries>(path);
 	}
 
 	async getSeriesSeason(series_id: number | string, season_no: number) : Promise<TmdbSeriesSeason | null>
 	{
 		const path =  `/tv/${series_id}/season/${season_no}`;
 
-		const details : TmdbSeriesSeason = await this.request(path);
-
-		return details;
+		return this.request<TmdbSeriesSeason>(path);
 	}
 
-	async request(path: string, query = {})
+	async request<T>(path: string, query: TmdbQuery = {}) : Promise<T | null>
 	{
-		const url = new URL(`https://api.themoviedb.org/3${path}`);
-
-		const base_query = {
-			append_to_response : "external_ids,credits"
+		const query_params = {
+			append_to_response : "external_ids,credits",
+			...query
 		}
 
-		const query_parameters = { ...base_query, ...query}
-
-		Object.entries(query_parameters).forEach(([k, v]) => {
-			if (v !== undefined && v !== null)
+		return obsidianGetUrl<T>(
+			`https://api.themoviedb.org/3${path}`,
 			{
-				url.searchParams.set(k, String(v));
-			}
-		});
-
-		const res = await fetch(url, {
-			headers: {
 				Authorization: `Bearer ${this.API_KEY}`,
 				'Content-Type': 'application/json',
 			},
-		});
-
-		if (!res.ok)
-		{
-			const text = await res.text().catch(() => '');
-			console.error(`TMDb ${res.status} ${res.statusText} for ${url.pathname}: ${text}`)
-
-			return null;
-		}
-
-		return res.json();
+			query_params
+		);
 	}
 }
-

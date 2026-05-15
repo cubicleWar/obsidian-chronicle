@@ -1,7 +1,9 @@
 import { App, TFile, Vault } from "obsidian";
 import { downloadBinaryFile } from "utilities/files.js";
-
-type FrontmatterPrimitive = string | number | boolean | null;
+import { PrimitiveValue } from "utilities/models/types";
+//type FrontmatterPrimitive = string | number | boolean | null;
+type FrontmatterValue = PrimitiveValue | PrimitiveValue[];
+type FrontmatterRecord = Record<string, FrontmatterValue | undefined>;
 
 export class VaultFileService
 {
@@ -9,7 +11,7 @@ export class VaultFileService
 
 	async openNote(note: TFile)
 	{
-		this.app.workspace.getLeaf(true).openFile(note);
+		await this.app.workspace.getLeaf(true).openFile(note);
 	}
 
 	async readNote(note_reference: string | TFile): Promise<string | null>
@@ -54,7 +56,7 @@ export class VaultFileService
 			return;
 		}
 
-		this.ensureParentFolders(output_path);
+		await this.ensureParentFolders(output_path);
 
 		const data = await downloadBinaryFile(url);
 
@@ -99,49 +101,59 @@ export class VaultFileService
 	async updateFrontmatterAttribute(
 		file: TFile,
 		key: string,
-		value?: FrontmatterPrimitive | FrontmatterPrimitive[],
+		value?: FrontmatterValue,
 		overwrite: boolean = false,
 		forceList: boolean = false,
 		dedupe: boolean = true
 	): Promise<void>
 	{
-		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			const existing = (fm as any)[key];
+		await this.app.fileManager.processFrontMatter(file, (fm: FrontmatterRecord) => {
+			const existing = fm[key];
 
-			const asArray = (v: any): any[] => {
+			const asArray = (v: FrontmatterValue | undefined): PrimitiveValue[] => {
 				if (Array.isArray(v)) return v;
 				if (v === undefined || v === null) return [];
 
 				return [v];
 			};
 
-			const dedupeArray = (arr: any[]) => (dedupe ? Array.from(new Set(arr)) : arr);
+			const dedupeArray = (arr: PrimitiveValue[]): PrimitiveValue[] =>
+				dedupe ? Array.from(new Set(arr)) : arr;
 
 			if (overwrite)
 			{
 				if (value === undefined)
 				{
-					delete (fm as any)[key];
+					delete fm[key];
 				}
 				else
 				{
-					(fm as any)[key] = forceList ? asArray(value) : value;
+					fm[key] = forceList ? asArray(value) : value;
 				}
 			}
 			else
 			{
-				if(Array.isArray(existing) || forceList)
+				if(value === undefined)
+				{
+					return;
+				}
+
+				if(Array.isArray(existing) || Array.isArray(value) || forceList)
 				{
 					const toAdd = asArray(value);
 					let next = [...asArray(existing), ...toAdd];
 
 					next = dedupe ? dedupeArray(next) : next;
 
-					(fm as any)[key] = next;
+					fm[key] = next;
+				}
+				else if(existing === undefined || existing === null || existing === "")
+				{
+					fm[key] = value;
 				}
 				else
 				{
-					(fm as any)[key] = existing + " " + value;
+					fm[key] = `${existing} ${value}`;
 				}
 			}
 

@@ -1,11 +1,9 @@
 import { Chronicle } from './chronicle/Chronicle.js'
 import Handlebars from "handlebars";
-import { toMarkdownlist } from 'obsidianx/formatters.js';
-import { toBacklink } from 'obsidianx/formatters.js';
-import { toYamlSafeString } from 'obsidianx/formatters.js';
+import { toMarkdownlist, toBacklink, toYamlSafeString } from 'obsidianx/helpers/formatters.js';
 
-Handlebars.registerHelper('list', (value) => toMarkdownlist(value));
-Handlebars.registerHelper('backlink', (value, mode) => toBacklink(value, mode));
-Handlebars.registerHelper('safeYamlString', (value) => toYamlSafeString(value))
+Handlebars.registerHelper('list', toMarkdownlist);
+Handlebars.registerHelper('backlink', toBacklink);
+Handlebars.registerHelper('safeYamlString', toYamlSafeString)
 
 export default Chronicle;

@@ -1,4 +1,4 @@
-
+const INVALID_FILENAME_CHARS = /[\\/:*?"<>|]/g;
 
 // Takes a comma delimited string or an array of strings and converts
 // to a markdown list
@@ -41,19 +41,23 @@ export function toBacklink(value: string, mode: "fm" | "embed" | "body" = "fm") 
 	else
 	{
 		// Return the default "fm" mode
-		return `\"${result}\"`;
+		return `"${result}"`;
 	}
 }
 
 export function slugifyFilename(filename: string, spacer: string = " ") : string
 {
 	// Obsidian is fine with many characters, but keep filenames safe across OSes.
-	return filename
+	const safe_filename = filename
 			.trim()
-			.replace(/[\/\\:*?"<>|]/g, "")		// Windows-illegal
-			.replace(/\s+/g, spacer)
-			.replace(/\.$/, "") 				// no trailing dot on Windows
+			.replace(INVALID_FILENAME_CHARS, "")
+			.replace(/\s+/g, " ")
+			.replace(/-+/g, "-")
+			.replace(/^\.+/, "")
+			.replace(/[. ]+$/, "")		// no trailing dot on Windows
 			.slice(0, 180);
+
+	return safe_filename || "Untitled";
 }
 
 /**
@@ -75,7 +79,7 @@ export function toYamlSafeString(value: string): string
 	const yamlBooleanOrNull = /^(true|false|null|~)$/i;
 	const yamlNumber = /^[-+]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?$/;
 	const yamlDate = /^\d{4}-\d{2}-\d{2}$/;
-	const startsWithUnsafeChar = /^[!&*[\]{}#|>@`"'%?:,\-]/;
+	const startsWithUnsafeChar = /^[!&*[\]{}#|>@`"'%?:,-]/;
 	const containsUnsafeYamlSyntax = /[:#]\s|[\n\r\t]/;
 	const hasLeadingOrTrailingWhitespace = value !== trimmed;
 

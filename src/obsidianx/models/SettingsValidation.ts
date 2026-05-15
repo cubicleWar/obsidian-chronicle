@@ -4,4 +4,4 @@ export type ValidationResult =
 	errors: string[];
 };
 
-export type SettingsValidator<T> = (settings: T, mode: any) => ValidationResult
+export type SettingsValidator<T, TMode = string | undefined> = (settings: T, mode?: TMode) => ValidationResult

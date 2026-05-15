@@ -1,21 +1,23 @@
 import { TmdbSeries } from "tmdb/models/TmdbSeries.js"
+import { isRecordLike } from "utilities/models/typeguards"
 
 
-export function isTmdbSeries(obj: any): obj is TmdbSeries
+export function isTmdbSeries(obj: unknown): obj is TmdbSeries
 {
+	if(!isRecordLike(obj)) return false;
+
 	return (
-		typeof obj === 'object' &&
 		'id' in obj &&
 		'name' in obj &&
-		'seasons' in obj &&
 		Array.isArray(obj.seasons)
 	)
 }
 
-export function isTmdbSeriesSearch(obj: any): obj is TmdbSeries
+export function isTmdbSeriesSearch(obj: unknown): obj is TmdbSeries
 {
+	if(!isRecordLike(obj)) return false;
+
 	return (
-		typeof obj === 'object' &&
 		'id' in obj &&
 		'name' in obj &&
 		'first_air_date' in obj

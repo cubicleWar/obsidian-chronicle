@@ -1,6 +1,4 @@
-
-
-export interface OmdbBasicRequest
+interface OmdbBasicRequest
 {
 	apikey: string;							// OMDB API key
 	r?: "json" | "xml";						// Data type of return

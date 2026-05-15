@@ -65,7 +65,6 @@ export function getMovie(data: TmdbMovie, image_path: string) : Movie
 	const year = toIntOrY(data.release_date?.slice(0, 4), null);
 	const artwork = data.poster_path ? `https://image.tmdb.org/t/p/original${data.poster_path}` : null;
 	const full_title = data.title + year ? `(${year})` : "";
-	const director: string = data.credits?.crew.filter(c => c.department === "Directing").map((a: TmdbCrew) => a.name)[0] ?? "";
 
 	return {
 		title: `${data.title}`,
