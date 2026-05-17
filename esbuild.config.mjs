@@ -1,6 +1,5 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
 
 const isWatch = process.argv.includes("--watch");
 const production = process.argv.includes("production");
@@ -16,8 +15,7 @@ const buildOptions = {
 	treeShaking: true,
 	minify: production,
 	external: [
-		"obsidian",
-		...builtins
+		"obsidian"
 	]
 };
 

@@ -9,9 +9,11 @@ import { TmdbSeriesEpisode } from "./models/TmdbSeriesEpisode.js";
 import { MediaType } from "media/models/MediaType.js";
 import { SearchResult } from "media/models/SearchResult.js";
 import { obsidianGetUrl } from "obsidianx/helpers/urlRequest.js";
+import { isTmdbErrorResponse, TmdbErrorResponse } from "./models/TmdbErrorResponse.js";
 
 type TmdbMedia = TmdbMovie | TmdbSeries | TmdbSeriesEpisode
 type TmdbQuery = Record<string, string | number | null | undefined>;
+
 
 export class TmdbClient
 {
@@ -112,7 +114,7 @@ export class TmdbClient
 			...query
 		}
 
-		return obsidianGetUrl<T>(
+		const response = await obsidianGetUrl<T | TmdbErrorResponse>(
 			`https://api.themoviedb.org/3${path}`,
 			{
 				Authorization: `Bearer ${this.API_KEY}`,
@@ -120,5 +122,18 @@ export class TmdbClient
 			},
 			query_params
 		);
+
+		if(response === null)
+		{
+			return null;
+		}
+
+		if(isTmdbErrorResponse(response))
+		{
+			console.warn(`TMDb request failed (${response.status_code}): ${response.status_message}`);
+			return null;
+		}
+
+		return response;
 	}
 }

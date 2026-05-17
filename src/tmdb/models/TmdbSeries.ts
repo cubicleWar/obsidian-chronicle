@@ -3,6 +3,7 @@ import { TmdbPerson } from "./TmdbPerson.js";
 import { TmdbEpisodeSummary } from "./TmdbEpisodeSummary.js";
 import { TmdbCompany } from "./TmdbCompany.js";
 import { TmdbSeasonSummary } from "./TmdbSeriesSeason.js";
+import { isRecordLike } from "utilities/models/typeguards.js";
 
 export interface TmdbSeries extends TmdbEntry
 {
@@ -24,4 +25,26 @@ export interface TmdbSeries extends TmdbEntry
 	seasons: TmdbSeasonSummary[];
 	type: string; // e.g. "Scripted"
 	miniseries: boolean;
+}
+
+export function isTmdbSeries(obj: unknown): obj is TmdbSeries
+{
+	if(!isRecordLike(obj)) return false;
+
+	return (
+		'id' in obj &&
+		'name' in obj &&
+		Array.isArray(obj.seasons)
+	)
+}
+
+export function isTmdbSeriesSearch(obj: unknown): obj is TmdbSeries
+{
+	if(!isRecordLike(obj)) return false;
+
+	return (
+		'id' in obj &&
+		'name' in obj &&
+		'first_air_date' in obj
+	)
 }

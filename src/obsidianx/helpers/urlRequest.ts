@@ -20,20 +20,28 @@ export async function obsidianGetUrl<T>(
 	const query_str = searchParams.toString();
 	const url = query ? `${base_url}?${query_str}` : base_url;
 
-	const response = await requestUrl({
-		url: url,
-		method: "GET",
-		headers: headers
-	});
-
-	if (response.status < 200 || response.status >= 300)
+	try
 	{
-		console.error(
-			`GET ${base_url} failed with status ${response.status}: ${response.text}`
-		);
+		const response = await requestUrl({
+			url: url,
+			method: "GET",
+			headers: headers
+		});
 
+		if (response.status < 200 || response.status >= 300)
+		{
+			console.error(
+				`GET ${base_url} failed with status ${response.status}: ${response.text}`
+			);
+
+			return null;
+		}
+
+		return response.json as T;
+	}
+	catch(error)
+	{
+		console.error("Http request failed", error);
 		return null;
 	}
-
-	return response.json as T;
 }

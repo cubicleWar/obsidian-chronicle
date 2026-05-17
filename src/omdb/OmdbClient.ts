@@ -9,6 +9,7 @@ import { OmdbSearchResult } from "./models/OmdbSearchResult.js"
 import { obsidianGetUrl } from "obsidianx/helpers/urlRequest.js";
 import { MediaType } from "media/models/MediaType.js";
 import { SearchResult } from "media/models/SearchResult.js";
+import { isOmdbErrorResponse, OmdbErrorResponse } from "./models/OmdbErrorResponse.js";
 
 type OmdbMedia = OmdbMovie | OmdbSeries | OmdbSeriesEpisode
 
@@ -95,7 +96,7 @@ export class OmdbClient
 			return season;
 		}
 
-		return null
+		return null;
 	}
 
 	async enrichEpisodes(season: OmdbSeriesSeason) : Promise<OmdbSeriesSeason>
@@ -126,10 +127,23 @@ export class OmdbClient
 			...searchTerms
 		}
 
-		return obsidianGetUrl<T>(
+		const response = await obsidianGetUrl<T | OmdbErrorResponse>(
 			"https://www.omdbapi.com/",
 			{},
 			query_params
-		)
+		);
+
+		if(response === null)
+		{
+			return null;
+		}
+
+		if(isOmdbErrorResponse(response))
+		{
+			console.warn(`OMDb request failed: ${response.Error}`);
+			return null;
+		}
+
+		return response;
 	}
 }

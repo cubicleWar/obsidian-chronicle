@@ -1,14 +1,12 @@
 // TMDB Client
 import { TmdbClient } from "tmdb/TmdbClient.js";
 import { TmdbSearchResult } from "tmdb/models/TmdbSearchResult.js";
-import { TmdbMovie } from "tmdb/models/TmdbMovie.js";
-import { TmdbSeries } from "tmdb/models/TmdbSeries.js";
+import { TmdbMovie, isTmdbMovie } from "tmdb/models/TmdbMovie.js";
+import { TmdbSeries, isTmdbSeries, isTmdbSeriesSearch } from "tmdb/models/TmdbSeries.js";
 import { TmdbSeasonSummary, TmdbSeriesSeason } from "tmdb/models/TmdbSeriesSeason.js";
 import { TmdbSeriesEpisode } from "tmdb/models/TmdbSeriesEpisode.js";
 import { TmdbActor } from "tmdb/models/TmdbActor.js";
 import { TmdbCrew } from "tmdb/models/TmdbCrew.js";
-import { isTmdbSeries, isTmdbSeriesSearch } from "tmdb/guards/isTmdbSeries.js";
-import { isTmdbMovie } from "tmdb/guards/isTmdbMovie.js";
 
 // Chronicle Media
 import { SearchResult } from "../models/SearchResult.js";
