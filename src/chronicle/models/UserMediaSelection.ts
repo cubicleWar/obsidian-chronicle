@@ -6,5 +6,5 @@ export interface UserMediaSelection
 	type: MediaType;
 	query: string;
 	item: SearchResult;
-	mark_watched: boolean;
+	mark_complete: boolean;
 }

@@ -7,11 +7,11 @@ import { OmdbSeriesEpisode } from "./models/OmdbSeriesEpisode.js";
 import { parseTitleAndYear } from "../utilities/parseTitleAndYear.js"
 import { OmdbSearchResult } from "./models/OmdbSearchResult.js"
 import { obsidianGetUrl } from "obsidianx/helpers/urlRequest.js";
-import { MediaType } from "media/models/MediaType.js";
 import { SearchResult } from "media/models/SearchResult.js";
 import { isOmdbErrorResponse, OmdbErrorResponse } from "./models/OmdbErrorResponse.js";
 
 type OmdbMedia = OmdbMovie | OmdbSeries | OmdbSeriesEpisode
+type OmdbMediaTypes = "movie" | "series" | "episode";
 
 export class OmdbClient
 {
@@ -28,7 +28,7 @@ export class OmdbClient
 		this.API_KEY = key;
 	}
 
-	async search(search_str: string, type: MediaType | null = null) : Promise<OmdbSearchResult[]>
+	async search(search_str: string, type: OmdbMediaTypes | null = null) : Promise<OmdbSearchResult[]>
 	{
 		const { title, year } = parseTitleAndYear(search_str);
 
@@ -44,13 +44,13 @@ export class OmdbClient
 		}
 	}
 
-	async find(type: MediaType, item: SearchResult) : Promise<OmdbMedia | null>
+	async find(type: OmdbMediaTypes, item: SearchResult) : Promise<OmdbMedia | null>
 	{
 		let details : OmdbMedia | null = null;
 
-		if(item.imdb_id)
+		if(item.ids.imdb_id)
 		{
-			details = await this.request<OmdbMedia>({i: item.imdb_id, type: type});
+			details = await this.request<OmdbMedia>({i: item.ids.imdb_id, type: type});
 		}
 		else
 		{

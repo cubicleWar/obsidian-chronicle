@@ -23,10 +23,15 @@ export function getSearchResults(data: OmdbSearchResult[]) : SearchResult[]
 {
 	return data.map(r => ({
 		title: String(r.Title ?? ""),
+		primary_artist: "",
 		year: String(r.Year ?? ""),
 		type: (r.Type ?? "movie"),
-		imdb_id: String(r.imdbID ?? ""),
-		tmdb_id: null,
+		ids: {
+			imdb_id: String(r.imdbID ?? ""),
+			tmdb_id: null,
+			open_library_id: null,
+			google_library_id: null
+		},
 		artwork: r.Poster && r.Poster !== "N/A" ? String(r.Poster) : null
 	}));
 }
@@ -43,7 +48,7 @@ export function getMovie(data: OmdbMovie, image_path: string) : Movie
 
 	return {
 		title: `${data.Title}`,
-		categories: ["\"[[Movies]]\""],
+		categories: ["[[Movies]]"],
 		genres: safeArraySplit(data.Genre),
 		director: data.Director && data.Director !== "N/A" ? data.Director : null,
 		cast: safeArraySplit(data.Actors),
@@ -70,7 +75,7 @@ export function getMovie(data: OmdbMovie, image_path: string) : Movie
 
 export function getSeries(data: OmdbSeries, image_path: string) : Series
 {
-	let categories  = ["\"[[TV Series]]\""];
+	let categories  = ["[[TV Series]]"];
 	let season_summaries : SeriesSeasonSummary[] = []
 	const total_seasons = toIntOrY(data.totalSeasons, 1);
 

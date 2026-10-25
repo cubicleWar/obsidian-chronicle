@@ -1,4 +1,11 @@
-const INVALID_FILENAME_CHARS = /[\\/:*?"<>|]/g;
+// Include wiki-link delimiters as well as characters forbidden by file systems.
+const INVALID_FILENAME_CHARS = /[\\/:*?"<>|#^[\]]/g;
+
+// JSON values are valid YAML flow values and preserve list item boundaries.
+export function toYamlValue(value: unknown): string
+{
+	return JSON.stringify(value) ?? "null";
+}
 
 // Takes a comma delimited string or an array of strings and converts
 // to a markdown list
@@ -15,7 +22,7 @@ export function toMarkdownlist(value: string | string[]) : string
 	{
 		for(let i = 0, len = value.length; i < len; i++)
 		{
-			list += `\n  - ${value[i]}`
+			list += `\n  - ${toYamlSafeString(value[i] ?? "")}`
 		}
 
 		return list;
@@ -28,6 +35,11 @@ export function toMarkdownlist(value: string | string[]) : string
 
 export function toBacklink(value: string, mode: "fm" | "embed" | "body" = "fm") : string
 {
+	if(!value?.trim())
+	{
+		return "";
+	}
+
 	let result = `[[${value}]]`
 
 	if(mode === "body")
@@ -41,13 +53,13 @@ export function toBacklink(value: string, mode: "fm" | "embed" | "body" = "fm") 
 	else
 	{
 		// Return the default "fm" mode
-		return `"${result}"`;
+		return toYamlSafeString(result);
 	}
 }
 
 export function slugifyFilename(filename: string, spacer: string = " ") : string
 {
-	// Obsidian is fine with many characters, but keep filenames safe across OSes.
+	// Keep generated names safe across OSes and inside Obsidian wiki-links.
 	const safe_filename = filename
 			.trim()
 			.replace(INVALID_FILENAME_CHARS, "")
@@ -60,46 +72,9 @@ export function slugifyFilename(filename: string, spacer: string = " ") : string
 	return safe_filename || "Untitled";
 }
 
-/**
- * Converts a string into a YAML-safe scalar for Obsidian frontmatter.
- *
- * - Leaves simple strings unquoted.
- * - Wraps risky strings in double quotes.
- * - Escapes backslashes and double quotes inside quoted strings.
- */
-export function toYamlSafeString(value: string): string
+// Always quote strings so YAML cannot interpret punctuation, dates or numbers.
+export function toYamlSafeString(value: string = ""): string
 {
-	const trimmed = value.trim();
-
-	if (trimmed === "")
-	{
-		return '""';
-	}
-
-	const yamlBooleanOrNull = /^(true|false|null|~)$/i;
-	const yamlNumber = /^[-+]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?$/;
-	const yamlDate = /^\d{4}-\d{2}-\d{2}$/;
-	const startsWithUnsafeChar = /^[!&*[\]{}#|>@`"'%?:,-]/;
-	const containsUnsafeYamlSyntax = /[:#]\s|[\n\r\t]/;
-	const hasLeadingOrTrailingWhitespace = value !== trimmed;
-
-	const needsQuotes =
-		yamlBooleanOrNull.test(trimmed) ||
-		yamlNumber.test(trimmed) ||
-		yamlDate.test(trimmed) ||
-		startsWithUnsafeChar.test(trimmed) ||
-		containsUnsafeYamlSyntax.test(value) ||
-		hasLeadingOrTrailingWhitespace;
-
-	if (!needsQuotes)
-	{
-		return value;
-	}
-
-	return `"${value
-		.replace(/\\/g, "\\\\")
-		.replace(/"/g, '\\"')
-		.replace(/\n/g, "\\n")
-		.replace(/\r/g, "\\r")
-		.replace(/\t/g, "\\t")}"`;
+	return JSON.stringify(value).replace(/[\u007f-\u009f\u2028\u2029]/g, character =>
+		`\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`);
 }

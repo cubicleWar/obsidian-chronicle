@@ -1,4 +1,3 @@
-import { TmdbCompany } from "./TmdbCompany.js";
 import { TmdbSeriesEpisode } from "./TmdbSeriesEpisode.js";
 import { hasCredits } from "./hasCredits.js";
 
@@ -25,7 +24,6 @@ export interface TmdbSeriesSeason extends hasCredits
 	poster_path: string;
 	season_number: number;
 	vote_average: number;
-	networks: TmdbCompany[];
 	episodes: TmdbSeriesEpisode[];
 }
 

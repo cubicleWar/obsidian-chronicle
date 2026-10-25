@@ -1,11 +1,11 @@
 import { App, Modal, Setting } from "obsidian";
-import { MediaDataOrchestrator } from "../MediaDataOrchestrator";
+import { MediaDataOrchestrator } from "../services/MediaDataOrchestrator.js";
 import { Series } from "media/models/Series.js"
 import { SeriesSeasonSummary } from "media/models/SeriesSeason";
 
 export class SeriesSeasonSelectModal extends Modal
 {
-	private resolve!: (value: number | null) => void;
+	private resolve?: (value: number | null) => void;
 	private selected_season: number = 1;
 
 	constructor(public app: App, service: MediaDataOrchestrator, private series: Series)
@@ -29,13 +29,15 @@ export class SeriesSeasonSelectModal extends Modal
 
 			new Setting(contentEl).addButton(btn =>
 				btn.setButtonText("Close").setCta().onClick(() => {
-					this.resolve(null);
+					this.resolve?.(null);
 					this.close();
 				})
 			);
 
 			return;
 		}
+
+		this.selected_season = seasons.find(season => season.season_number === 1)?.season_number ?? seasons[0]!.season_number;
 
 		new Setting(contentEl)
 			.setName("Season")
@@ -60,17 +62,24 @@ export class SeriesSeasonSelectModal extends Modal
 		const actions = new Setting(contentEl);
 		actions.addButton(btn =>
 			btn.setButtonText("Cancel").onClick(() => {
-			this.resolve(null);
+			this.resolve?.(null);
 			this.close();
 			})
 		);
 
 		actions.addButton(btn =>
 			btn.setButtonText("Select").setCta().onClick(() => {
-				this.resolve(this.selected_season);
+				this.resolve?.(this.series.seasons.some(season => season.season_number === this.selected_season) ? this.selected_season : null);
 				this.close();
 			})
 		);
+	}
+
+	onClose(): void
+	{
+		this.resolve?.(null);
+		this.resolve = undefined;
+		this.contentEl.empty();
 	}
 
 	openAndGetChoice(): Promise<number | null>

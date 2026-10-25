@@ -12,8 +12,13 @@ export default [
 				project: "./tsconfig.json"
 			}
 		},
-		// You can add your own configuration to override or add rules
-		rules: {
+		settings: {
+			"import/resolver": {
+				typescript: {
+					alwaysTryTypes: true,
+					project: "./tsconfig.json"
+				}
+			}
 		},
 	},
 ];

@@ -33,12 +33,12 @@ export function getSearchResults(data: TmdbSearchResult[]) : SearchResult[]
 
 		const artwork_path = r.poster_path ? TmdbClient.POSTER_BASE_URL + r.poster_path : null;
 
-		if(isTmdbMovie(r))
+		if('title' in r)
 		{
 			title = r.title;
 			year = r.release_date ? <string>r.release_date.split('-')[0] : "";
 			type = 'movie';
-			imdb_id = r.imdb_id;
+			imdb_id = r.imdb_id ?? null;
 		}
 		else if(isTmdbSeriesSearch(r))
 		{
@@ -49,10 +49,15 @@ export function getSearchResults(data: TmdbSearchResult[]) : SearchResult[]
 
 		return {
 			title: title,
+			primary_artist: "",
 			year: year,
 			type: type,
-			imdb_id: imdb_id,
-			tmdb_id: Number(r.id),
+			ids: {
+				imdb_id: imdb_id,
+				tmdb_id: Number(r.id),
+				open_library_id: null,
+				google_library_id: null
+			},
 			artwork: artwork_path
 		}
 	});
@@ -60,13 +65,13 @@ export function getSearchResults(data: TmdbSearchResult[]) : SearchResult[]
 
 export function getMovie(data: TmdbMovie, image_path: string) : Movie
 {
-	const year = toIntOrY(data.release_date?.slice(0, 4), null);
+	const year = data.release_date ? toIntOrY(data.release_date.slice(0, 4), null) : null;
 	const artwork = data.poster_path ? `https://image.tmdb.org/t/p/original${data.poster_path}` : null;
-	const full_title = data.title + year ? `(${year})` : "";
+	const full_title = `${data.title}${year !== null ? ` (${year})` : ""}`;
 
 	return {
 		title: `${data.title}`,
-		categories: ["\"[[Movie]]\""],
+		categories: ["[[Movies]]"],
 		genres: data.genres.map(g => g.name),
 		director: data.credits?.crew.filter(c => c.department === "Directing").map((a: TmdbCrew) => a.name)[0] ?? "",
 		cast: data.credits?.cast.map((a: TmdbActor) => a.name) ?? [],
@@ -74,7 +79,7 @@ export function getMovie(data: TmdbMovie, image_path: string) : Movie
 		runtime: data.runtime,
 		rating: data.vote_average,
 		year: year,
-		imdb_id: data?.external_ids?.imdb_id ?? null,
+		imdb_id: data.imdb_id || data.external_ids?.imdb_id || null,
 		tmdb_id: data.id,
 		rated: null,
 		released: data.release_date,
@@ -90,18 +95,18 @@ export function getMovie(data: TmdbMovie, image_path: string) : Movie
 
 export function getSeries(data: TmdbSeries, image_path: string) : Series
 {
-	let categories  = ["\"[[TV Series]]\""];
+	let categories  = ["[[TV Series]]"];
 
 	if(isMiniseries(data))
 	{
-		categories.push("\"[[Miniseries]]\"");
+		categories.push("[[Miniseries]]");
 	}
 	else
 	{
 		categories.push(data.type);
 	}
 
-	const artwork = `https://image.tmdb.org/t/p/original${data.poster_path}`;
+	const artwork = data.poster_path ? `https://image.tmdb.org/t/p/original${data.poster_path}` : null;
 
 	return {
 		title: `${data.name}`,
@@ -165,7 +170,7 @@ export function getSeriesSeason(series: Series, data: TmdbSeriesSeason) : Series
 		released: data.air_date,
 		rating: data.vote_average,
 		cast: data.credits ? data.credits.cast.map((a: TmdbActor) => a.name) : [],
-		networks: data.networks.map(n => `${n.name} (${n.origin_country})`),
+		networks: [...series.networks],
 		number_of_episodes: episodes.length,
 		episodes: episodes,
 		runtime: stats.total_runtime,

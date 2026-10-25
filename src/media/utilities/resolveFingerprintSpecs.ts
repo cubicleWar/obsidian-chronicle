@@ -64,25 +64,29 @@ export function resolveFingerprintSpecs(obj: RecordLike, path: string[]): KeySpe
 		];
 	}
 
-	// Episodes inside seasons
-	if (pathKey === "seasons.episodes")
+	// A season is also merged directly, so its episodes can be at the root.
+	// Titles are not identities: different episodes can share the same title.
+	if (pathKey === "episodes" || pathKey === "seasons.episodes")
 	{
+		const episodeNumber = (value: unknown): string =>
+			typeof value === "number" && Number.isInteger(value) && value >= 0 ? String(value) : "";
+		const providerId = (value: unknown): string =>
+			typeof value === "string" ? value.trim() : typeof value === "number" && value > 0 ? String(value) : "";
 		return [
 			{
-				group: "semantic",
-				prefix: "semantic",
+				group: "strong",
+				prefix: "episode-id",
+				mode: "per-field",
 				parts: [
-					{ fields: ["episode_number"], required: true },
-					{ fields: ["title", "name"], required: true },
+					{ fields: ["imdb_id", "tmdb_id"], transform: providerId },
 				],
 			},
 			{
-				group: "weak",
-				prefix: "weak",
-				includeLabels: true,
+				group: "semantic",
+				prefix: "episode-position",
 				parts: [
-					{ fields: ["title", "name"], label: "title", required: true },
-					{ fields: ["air_date"], label: "year", transform: extractYear },
+					{ fields: ["season_number"], transform: episodeNumber, required: true },
+					{ fields: ["episode_number"], transform: episodeNumber, required: true },
 				],
 			},
 		];

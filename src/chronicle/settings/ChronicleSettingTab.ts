@@ -6,6 +6,7 @@ import { FileSuggest } from "obsidianx/ui/FileSuggest.js";
 
 // Default templates
 import { MOVIE_TEMPLATE } from "../templates/MovieTemplate.js";
+import { BOOK_TEMPLATE } from "../templates/BookTemplate.js";
 import { SERIES_TEMPLATE } from "../templates/SeriesTemplate.js";
 import { SERIES_SEASON_TEMPLATE } from "../templates/SeriesSeasonTemplate.js";
 import { MINISERIES_TEMPLATE } from "../templates/MiniSeriesTemplate.js"
@@ -25,9 +26,15 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 	display(): void
 	{
+		this.renderSettings();
+	}
+
+	private renderSettings(): void
+	{
 		const { containerEl } = this;
 
 		containerEl.empty();
+		this.statusElement = undefined;
 
 		// Display errors if required
 		this.displayErrorInfo(containerEl);
@@ -38,7 +45,15 @@ export class ChronicleSettingTab extends PluginSettingTab
 		this.displayMovieSettings(containerEl);
 		this.displaySeriesSettings(containerEl);
 		this.displayMiniSeriesSettings(containerEl);
+		this.displayBookSettings(containerEl);
 
+	}
+
+	private createSettingsPanel(containerEl: HTMLElement, heading: string): HTMLElement
+	{
+		const section = containerEl.createDiv({ cls: "chronicle-settings-section" });
+		new Setting(section).setName(heading).setHeading();
+		return section.createDiv({ cls: "chronicle-settings-panel" });
 	}
 
 	displayErrorInfo(containerEl?: HTMLElement)
@@ -76,7 +91,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 	displayApiSettings(containerEl: HTMLElement)
 	{
-		new Setting(containerEl).setName("Data services").setHeading();
+		containerEl = this.createSettingsPanel(containerEl, "Data services");
 
 		new Setting(containerEl)
 			.setName('Omdb API key')
@@ -99,11 +114,33 @@ export class ChronicleSettingTab extends PluginSettingTab
 					void this.updateSetting('tmdb_api_key', value);
 				})
 			);
+
+		new Setting(containerEl)
+			.setName('Google books API key')
+			.setDesc('Optional API key for Google books requests. Google books and open library are both used even when credentials are blank.')
+			.addTextArea(text => text
+				.setPlaceholder('')
+				.setValue(this.plugin.settings.gb_api_key)
+				.onChange((value) => {
+					void this.updateSetting('gb_api_key', value);
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Open library identifier')
+			.setDesc('Optional contact email to identify open library requests. No account is required. Both book services are used even when credentials are blank.')
+			.addTextArea(text => text
+				.setPlaceholder('')
+				.setValue(this.plugin.settings.olib_api_key)
+				.onChange((value) => {
+					void this.updateSetting('olib_api_key', value);
+				})
+			);
 	}
 
 	displayMovieSettings(containerEl: HTMLElement)
 	{
-		new Setting(containerEl).setName("Movies").setHeading();
+		containerEl = this.createSettingsPanel(containerEl, "Movies");
 
 		this.createSearchSetting(containerEl, "movie_template_path", "Movie template", "The template used to create notes for movies.", "_templates/Movie Template.md", "file");
 
@@ -113,7 +150,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 	displaySeriesSettings(containerEl: HTMLElement)
 	{
-		new Setting(containerEl).setName("Series").setHeading();
+		containerEl = this.createSettingsPanel(containerEl, "Series");
 
 		this.createSearchSetting(containerEl, "series_template_path", "Series template", "The template used to create notes for series.", "_templates/Series Template.md", "file");
 
@@ -129,7 +166,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 			this.toggleSettingVisibility(output_setting, !this.plugin.settings.differentiate_miniseries)
 		}
 
-		new Setting(containerEl).setName("Miniseries").setHeading();
+		containerEl = this.createSettingsPanel(containerEl, "Miniseries");
 
 		new Setting(containerEl)
 			.setName('Differentiate miniseries')
@@ -148,8 +185,19 @@ export class ChronicleSettingTab extends PluginSettingTab
 		setVisibility();
 	}
 
+	displayBookSettings(containerEl: HTMLElement)
+	{
+		containerEl = this.createSettingsPanel(containerEl, "Books");
+
+		this.createSearchSetting(containerEl, "book_template_path", "Book template", "The template used to create notes for books.", "_templates/Book Template.md", "file");
+
+		this.createSearchSetting(containerEl, "book_output_path", "Book notes folder", "Where to save book notes.", "Media/Books", "folder")
+	}
+
 	displayGeneralSettings(containerEl: HTMLElement)
 	{
+		containerEl = this.createSettingsPanel(containerEl, "General");
+
 		new Setting(containerEl)
 			.setName('Export reference templates')
 			.setDesc('Save reference templates for all media types in the root of your vault for customize and/or relocate and use.')
@@ -195,12 +243,14 @@ export class ChronicleSettingTab extends PluginSettingTab
 			MOVIE_TEMPLATE,
 			SERIES_TEMPLATE,
 			SERIES_SEASON_TEMPLATE,
-			MINISERIES_TEMPLATE
+			MINISERIES_TEMPLATE,
+			BOOK_TEMPLATE
 		];
 
 		for (const template of templates)
 		{
 			const file_path = `${template.name}.md`;
+			if(this.plugin.fileService.getTFile(file_path)) continue;
 			await this.plugin.fileService.writeNote(file_path, template.content)
 		}
 	}
@@ -258,7 +308,7 @@ export class ChronicleSettingTab extends PluginSettingTab
 
 		if(refresh)
 		{
-			this.display()
+			this.renderSettings()
 		}
 	}
 }

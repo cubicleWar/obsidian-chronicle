@@ -8,6 +8,8 @@ export interface ChronicleSettings
 	// API keys
 	omdb_api_key: string;
 	tmdb_api_key: string;
+	olib_api_key: string;
+	gb_api_key: string;
 
 	// Movies
 	movie_output_path: string;
@@ -23,4 +25,8 @@ export interface ChronicleSettings
 	differentiate_miniseries: boolean;
 	miniseries_template_path: string;
 	miniseries_output_path: string;
+
+	// Books
+	book_template_path: string;
+	book_output_path: string;
 }

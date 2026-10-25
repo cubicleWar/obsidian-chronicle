@@ -42,6 +42,30 @@
 
 /* Settings */
 
+.chronicle-settings-section {
+	margin-bottom: 24px;
+}
+
+.chronicle-settings-panel {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-l, 12px);
+	background-color: var(--background-primary);
+	padding: 0 16px;
+}
+
+.chronicle-settings-panel > .setting-item {
+	margin: 0;
+	padding: 16px 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.chronicle-settings-panel > .setting-item + .setting-item {
+	border-top: 1px solid var(--background-modifier-border);
+}
+
 .hidden {
 	display: none;
 }

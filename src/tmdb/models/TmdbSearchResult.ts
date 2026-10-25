@@ -25,7 +25,7 @@ interface TmdbMovieSearchResult extends TmdbBaseSearchResult
 	title: string;
 	original_title: string;
 	release_date: string;
-	imdb_id: string;
+	imdb_id?: string | null;
 }
 
 export type TmdbSearchResult = TmdbMovieSearchResult | TmdbSeriesSearchResult;

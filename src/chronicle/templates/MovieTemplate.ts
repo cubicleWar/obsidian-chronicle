@@ -1,28 +1,32 @@
+import { ARTWORK_PROPERTIES, ARTWORK_EMBED } from "./ArtworkTemplate.js";
+import { templateMetadata } from "./TemplateMetadata.js";
+
 const MOVIE_TEMPLATE_CONTENT =
 `---
-imdb_id: {{ imdb_id }}
-tmdb_id: {{ tmdb_id }}
 title: {{ safeYamlString title }}
-categories: {{ list categories }}
-genres: {{ list genres }}
-director: {{ director }}
-cast: {{ list cast }}
-writers: {{ list writers }}
+imdb_id: {{ safeYamlString imdb_id }}
+tmdb_id: {{ tmdb_id }}
+categories: {{ yaml categories }}
+genres: {{ yaml genres }}
+director: {{ safeYamlString director }}
+cast: {{ yaml cast }}
+writers: {{ yaml writers }}
 runtime: {{ runtime }}
 year: {{ year }}
 rating: {{ rating }}
-rated: {{ rated }}
+rated: {{ safeYamlString rated }}
 released: {{ released }}
-languages: {{ languages }}
-countries: {{ list countries }}
-artwork: {{ backlink artwork_local }}
-box_office: {{ box_office }}
-watch_dates: {{ list watch_dates }}
+languages: {{ yaml languages }}
+countries: {{ yaml countries }}
+${ARTWORK_PROPERTIES}
+box_office: {{ safeYamlString box_office }}
+watch_dates: {{ yaml watch_dates }}
+${templateMetadata("movie-2026-10-25a")}
 ---
 
 # {{title}}
 
-{{ backlink artwork_local "embed"}}
+${ARTWORK_EMBED}
 
 {{ overview }}
 `

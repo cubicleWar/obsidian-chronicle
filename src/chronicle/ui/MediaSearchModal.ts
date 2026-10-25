@@ -1,25 +1,18 @@
 import { App, Modal, Setting, TextComponent } from "obsidian";
-import { MediaDataOrchestrator } from "../MediaDataOrchestrator.js";
 import { SearchResult } from "media/models/SearchResult.js";
 import { MediaType } from "media/models/MediaType.js";
 import { UserMediaSelection } from "../models/UserMediaSelection.js";
+import { DataSearchOrchestrator } from "../services/DataOrchestrator.js";
 
-
-
-////////////////////////////////////////////////////////////////////////////
-// A single action modal that:
-//  - lets user type title of a movie or series depending on the mode of the modal
-//  - shows search results inline
-//  - resolves with the selected media item (or null if cancelled)
-////////////////////////////////////////////////////////////////////////////
+const getDefaultMetaString = (r: SearchResult): string => `${r.year}${r.type ? ` • ${r.type}` : ""}`;
 
 export class MediaSearchModal extends Modal
 {
 	private resolve!: (value: UserMediaSelection | null) => void;
 	private settled = false;
-
+	private action_verb: string = "watched";
 	private query: string = "";
-	private mark_watched: boolean = true;
+	private mark_complete: boolean = true;
 
 	private titleInput?: TextComponent;
 	private resultsEl?: HTMLElement;
@@ -28,10 +21,15 @@ export class MediaSearchModal extends Modal
 	private debounceTimer: number | null = null;
 	private requestSeq = 0;
 
-	constructor(app: App, private service: MediaDataOrchestrator, private mode: MediaType = "movie")
+	constructor(app: App, private service: DataSearchOrchestrator, private mode: MediaType, private meta_string_fn: (r: SearchResult) => string = getDefaultMetaString)
 	{
 		super(app);
 		this.modalEl.addClass("chronicle-search-modal");
+
+		if(mode === "book")
+		{
+			this.action_verb = "read";
+		}
 	}
 
 	openAndGetChoice(): Promise<UserMediaSelection | null>
@@ -44,7 +42,10 @@ export class MediaSearchModal extends Modal
 
 	private settle(value: UserMediaSelection | null)
 	{
-		if (this.settled) return;
+		if (this.settled)
+		{
+			return;
+		}
 
 		this.settled = true;
 		this.resolve(value);
@@ -59,14 +60,13 @@ export class MediaSearchModal extends Modal
 		contentEl.createEl("h2", { text: `Chronicle a ${this.mode}` });
 
 		new Setting(contentEl)
-
-			.setName("Mark as watched")
-			.setDesc("Add a watched date when creating or updating the movie note.")
+			.setName("Mark as " + this.action_verb)
+			.setDesc("Add the date you " + this.action_verb + " the title.")
 			.addToggle((toggle) => {
 				toggle
-					.setValue(this.mark_watched)
+					.setValue(this.mark_complete)
 					.onChange((value) => {
-						this.mark_watched = value;
+						this.mark_complete = value;
 					});
 			});
 
@@ -92,6 +92,8 @@ export class MediaSearchModal extends Modal
 				});
 			});
 
+
+
 		// Status + results
 		this.statusEl = contentEl.createDiv({ cls: "chronicle-search-status" });
 		this.resultsEl = contentEl.createDiv({ cls: "chronicle-search-results" });
@@ -115,6 +117,8 @@ export class MediaSearchModal extends Modal
 
 	onClose()
 	{
+		this.requestSeq++;
+
 		if (!this.settled)
 		{
 			this.resolve(null);
@@ -130,7 +134,12 @@ export class MediaSearchModal extends Modal
 
 	private queueSearch(delayMs = 250)
 	{
-		if (this.debounceTimer) window.clearTimeout(this.debounceTimer);
+		this.requestSeq++;
+
+		if (this.debounceTimer)
+		{
+			window.clearTimeout(this.debounceTimer);
+		}
 
 		const q = this.query.trim();
 
@@ -157,6 +166,11 @@ export class MediaSearchModal extends Modal
 		{
 			const results: SearchResult[] = await this.service.search(query, mode);
 
+			if (seq !== this.requestSeq)
+			{
+				return;
+			}
+
 			if (results.length === 0)
 			{
 				this.setStatus("No results.");
@@ -168,9 +182,12 @@ export class MediaSearchModal extends Modal
 		}
 		catch (e: unknown)
 		{
-			if (seq !== this.requestSeq) return; // stale
+			if (seq !== this.requestSeq)
+			{
+				return; // stale
+			}
 
-			this.setStatus("Search failed.");
+			this.setStatus(mode === "book" && e instanceof Error ? `Search failed: ${e.message}` : "Search failed.");
 			console.error("Obsidian Chronicle - Media search error:", e);
 		}
 	}
@@ -222,7 +239,7 @@ export class MediaSearchModal extends Modal
 			});
 			info.createDiv({
 				cls: "chronicle-result-meta",
-				text: `${r.year}${r.type ? ` • ${r.type}` : ""}`
+				text: this.meta_string_fn(r)
 			});
 
 			const pick = () => {
@@ -230,7 +247,7 @@ export class MediaSearchModal extends Modal
 					type: this.mode,
 					query: this.query.trim(),
 					item: r,
-					mark_watched: this.mark_watched
+					mark_complete: this.mark_complete
 				});
 			};
 

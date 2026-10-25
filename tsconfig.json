@@ -28,6 +28,8 @@
 			"media/*": ["./src/media/*"],
 			"obsidianx/*": ["./src/obsidianx/*"],
 			"omdb/*": ["./src/omdb/*"],
+			"openlibrary/*": ["./src/openlibrary/*"],
+			"googlebooks/*": ["./src/googlebooks/*"],
 			"tmdb/*": ["./src/tmdb/*"],
 			"utilities/*": ["./src/utilities/*"]
 		}

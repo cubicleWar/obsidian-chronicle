@@ -19,7 +19,7 @@ export function generateEpisodeTable(episodes: SeriesEpisode[])
 			const released = episode.released ? formatDate(episode.released) : "";
 			const plot = episode.overview.replace(/[\r\n]+/g, ' ');
 
-			table.push([String(episode.episode_number), episode.title, String(episode.runtime), released, plot])
+			table.push([String(episode.episode_number), episode.title, String(episode.runtime ?? ""), released, plot])
 		}
 
 		content = markdownTable(table, table_options);

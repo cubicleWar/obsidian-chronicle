@@ -51,9 +51,9 @@ export class TmdbClient
 
 	async find(type: MediaType, item: SearchResult) : Promise<TmdbMedia | null>
 	{
-		if(item.imdb_id)
+		if(item.ids.imdb_id)
 		{
-			const path = `/find/${item.imdb_id}`;
+			const path = `/find/${item.ids.imdb_id}`;
 			const resp = await this.request<TmdbFindResponse>(path, {external_source: "imdb_id"})
 
 			if(resp === null)

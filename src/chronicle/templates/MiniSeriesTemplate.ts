@@ -1,28 +1,32 @@
+import { ARTWORK_PROPERTIES, ARTWORK_EMBED } from "./ArtworkTemplate.js";
+import { templateMetadata } from "./TemplateMetadata.js";
+
 const MINISERIES_TEMPLATE_CONTENT =
 `---
+title: {{ safeYamlString title }}
 tmdb_id: {{ tmdb_id }}
 series_tmdb_id: {{ series_tmdb_id }}
-series_imdb_id: {{ series_imdb_id }}
-title: {{ safeYamlString title }}
-categories: {{ list categories }}
-genres: {{ list genres }}
-cast: {{cast}}
+series_imdb_id: {{ safeYamlString series_imdb_id }}
+categories: {{ yaml categories }}
+genres: {{ yaml genres }}
+cast: {{ yaml cast }}
 rating: {{ rating }}
 year: {{ year }}
 released: {{ released }}
 runtime: {{ runtime }}
 average_runtime: {{ average_runtime }}
-languages: {{ list languages }}
-countries: {{ list countries }}
+languages: {{ yaml languages }}
+countries: {{ yaml countries }}
 episodes: {{ number_of_episodes }}
-poster: {{ backlink artwork_local }}
-networks: {{ list networks }}
-watch_dates: {{ list watch_dates }}
+${ARTWORK_PROPERTIES}
+networks: {{ yaml networks }}
+watch_dates: {{ yaml watch_dates }}
+${templateMetadata("miniseries-2026-10-25a")}
 ---
 
 # {{title}}
 
-{{ backlink artwork_local "embed"}}
+${ARTWORK_EMBED}
 
 {{ overview }}
 

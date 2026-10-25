@@ -30,6 +30,7 @@ export class VaultFileService
 
 	async writeNote(path: string, content: string, overwrite: boolean = false) : Promise<TFile>
 	{
+		await this.ensureParentFolders(path);
 		return this.vault.create(path, content);
 	}
 
@@ -165,6 +166,11 @@ export class VaultFileService
 	{
 		const idx = file_path.lastIndexOf("/");
 		const folder_path = idx === -1 ? "" : file_path.slice(0, idx);
+
+		if(!folder_path)
+		{
+			return;
+		}
 
 		if (!await this.app.vault.adapter.exists(folder_path))
 		{

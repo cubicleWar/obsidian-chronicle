@@ -7,36 +7,27 @@ type HandlebarsTemplateDelegate<TContext = unknown> = Handlebars.TemplateDelegat
 
 export class NoteRenderer<T extends object>
 {
-	private static template_cache = new Map<string, HandlebarsTemplateDelegate>()
+	private template_source: string | null = null;
 	private _template: HandlebarsTemplateDelegate | null = null;
 
 	constructor(private file_service: VaultFileService, private template_path: string) {}
 
 	private async getTemplate() : Promise<HandlebarsTemplateDelegate | null>
 	{
-		if(this._template === null)
+		// Read the current source on every render, including reused renderers.
+		const note = await this.file_service.readNote(this.template_path);
+
+		if(note === null)
 		{
-			// Check if template is in cache
-			if(NoteRenderer.template_cache.has(this.template_path))
-			{
-				this._template = <HandlebarsTemplateDelegate>NoteRenderer.template_cache.get(this.template_path);
-			}
-			else
-			{
-				const note = await this.file_service.readNote(this.template_path);
+			this.template_source = null;
+			this._template = null;
+			return null;
+		}
 
-				if(note === null)
-				{
-					// The template doesn't exist at the specified path
-					// Skip caching and return null
-					return null;
-				}
-
-				this._template = Handlebars.compile(note, {noEscape: true});
-				NoteRenderer.template_cache.set(this.template_path, this._template);
-			}
-
-			return this._template;
+		if(this._template === null || note !== this.template_source)
+		{
+			this._template = Handlebars.compile(note, {noEscape: true});
+			this.template_source = note;
 		}
 
 		return this._template;
@@ -67,13 +58,14 @@ export class NoteRenderer<T extends object>
 			{
 				data[key] = "";
 			}
-			else if(typeof value === 'string' || Number.isFinite(value))
+			else if(typeof value === 'string' || typeof value === 'boolean' || Number.isFinite(value))
 			{
 				data[key] = value
 			}
 			else if(Array.isArray(value))
 			{
-				data[key] = value.filter(x => !!x).join(", ");
+				// Keep lists structured for YAML rendering and Handlebars iteration.
+				data[key] = value.filter(x => !!x);
 			}
 			else if(isRecordLike(value))
 			{

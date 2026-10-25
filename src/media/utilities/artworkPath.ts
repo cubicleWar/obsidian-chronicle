@@ -5,12 +5,12 @@ export function getArtworkLocalPath(title : string, artwork: string | null, imag
 {
 	if(artwork && artwork !== "N/A")
 	{
-		const ext = getExtensionFromUrl(artwork);
+		const ext = getExtensionFromUrl(artwork) ?? "jpg";
 
 		if(imagePath !== null)
 		{
 			const image_filename = slugifyFilename(title, "_") + `.${ext}`
-			const image_path = `${imagePath}/${image_filename}`;
+			const image_path = imagePath ? `${imagePath}/${image_filename}` : image_filename;
 
 			return image_path;
 		}

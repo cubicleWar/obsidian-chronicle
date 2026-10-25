@@ -1,12 +1,12 @@
 import { OmdbClient } from "omdb/OmdbClient.js";
-import { MediaType } from "../media/models/MediaType.js";
-import { SearchResult } from "../media/models/SearchResult.js";
+import { AvMediaType } from "media/models/MediaType.js";
+import { SearchResult } from "media/models/SearchResult.js";
 import * as OmdbNormalizer from "media/services/OmdbNormalizer.js";
 import * as TmdbNormalizer from "media/services/TmdbNormalizer.js"
 import { Movie } from "media/models/Movie.js";
 import { Series } from "media/models/Series.js";
 import { Miniseries } from "media/models/Miniseries.js";
-import { ChronicleSettings } from "./settings/ChronicleSettings.js";
+import { ChronicleSettings } from "../settings/ChronicleSettings.js";
 import { SettingsService } from "obsidianx/services/Settings.service.js";
 import { EventRef } from "obsidian";
 import { TmdbClient } from "tmdb/TmdbClient.js";
@@ -22,14 +22,17 @@ import { SeriesSeason } from "media/models/SeriesSeason.js";
 import { mergeObjects } from "utilities/entity-unify/merge.js";
 import { resolveFingerprintSpecs } from "media/utilities/resolveFingerprintSpecs.js"
 import { makeFingerprint } from "utilities/entity-unify/fingerprint.js"
+import { DataOrchestrator } from "./DataOrchestrator.js";
+import { runtimeStatistics } from "media/utilities/runtimeStatistics.js";
+import { generateEpisodeTable } from "media/utilities/generateEpisodeTable.js";
 
 type ClientSet = {
 	id_name: "imdb_id" | "tmdb_id",
 	search: {
-		get: (search_str: string, type: MediaType) => Promise<unknown[]>,
+		get: (search_str: string, type: AvMediaType) => Promise<unknown[]>,
 		normalize: (data: unknown[]) => SearchResult[]
 	},
-	find: (type: MediaType, item: SearchResult) => Promise<unknown>,
+	find: (type: AvMediaType, item: SearchResult) => Promise<unknown>,
 	movie: {
 		get: (id: string) => Promise<unknown>,
 		normalize: (data: unknown, artwork: string) => Movie
@@ -44,7 +47,7 @@ type ClientSet = {
 	}
 }
 
-export class MediaDataOrchestrator
+export class MediaDataOrchestrator implements DataOrchestrator<Movie | Series | Miniseries>
 {
 	public readonly id_name = 'id';
 	private omdb_token: string | null = null;
@@ -63,7 +66,7 @@ export class MediaDataOrchestrator
 		this.updateSettings();
 	}
 
-	async search(search_str: string, type: MediaType) : Promise<SearchResult[]>
+	async search(search_str: string, type: AvMediaType) : Promise<SearchResult[]>
 	{
 		const sets = this.getClients(type);
 
@@ -86,16 +89,27 @@ export class MediaDataOrchestrator
 	{
 		const clients = this.getClients(type);
 		let results = [];
+		const ids = { ...item.ids };
 
 		for(const clientSet of clients)
 		{
-			let id = <string | null>item[clientSet.id_name];
+			const id = ids[clientSet.id_name];
 
-			const result = id ? await clientSet[type].get(id) : await clientSet.find(type, item);
+			const result = id ? await clientSet[type].get(String(id)) : await clientSet.find(type, { ...item, ids });
 
 			if(result !== null)
 			{
-				results.push(clientSet[type].normalize(result, this.artwork_path));
+				const media = clientSet[type].normalize(result, this.artwork_path);
+				const comparable = (["imdb_id", "tmdb_id"] as const).filter(key => ids[key] && media[key]);
+				// Enrichment must share an ID and must not contradict any known ID.
+				if(comparable.some(key => String(ids[key]) !== String(media[key])) || (results.length > 0 && !comparable.length))
+				{
+					console.warn("Chronicle skipped provider data with an unconfirmed or conflicting identity.");
+					continue;
+				}
+				results.push(media);
+				ids.imdb_id ??= media.imdb_id;
+				ids.tmdb_id ??= media.tmdb_id;
 			}
 		}
 
@@ -123,10 +137,29 @@ export class MediaDataOrchestrator
 			}
 		}
 
-		return mergeObjects<SeriesSeason>(
+		const season = mergeObjects<SeriesSeason>(
 			results,
 			makeFingerprint(resolveFingerprintSpecs)
 		);
+
+		if(!season)
+		{
+			return null;
+		}
+
+		// Provider summaries were calculated before enrichment. Derive all
+		// episode-dependent fields from the final merged, ordered episode list.
+		const episodes = [...season.episodes].sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
+		const stats = runtimeStatistics(episodes);
+
+		return {
+			...season,
+			episodes,
+			number_of_episodes: episodes.length,
+			runtime: stats.total_runtime,
+			average_runtime: stats.average_runtime,
+			episode_table: generateEpisodeTable(episodes)
+		};
 	}
 
 	// Merges together series and season data to form a Miniseries
@@ -193,7 +226,7 @@ export class MediaDataOrchestrator
 	// Returns an array of Client Sets (ApiClients and their associated normalizers)
 	// Only ApiClients that have been configured by the user will be returned
 	// The clients are ordered by the best for the associated media type
-	private getClients(type: MediaType) : ClientSet[]
+	private getClients(type: AvMediaType) : ClientSet[]
 	{
 		let omdbSet: ClientSet | null = null,
 			tmdbSet: ClientSet | null = null;

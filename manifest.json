@@ -1,8 +1,8 @@
 {
 	"id": "chronicle",
 	"name": "Chronicle",
-	"version": "1.0.5",
-	"minAppVersion": "1.5.3",
+	"version": "2.0.0",
+	"minAppVersion": "1.5.7",
 	"description": "Record your life through the stories you watch and read.",
 	"author": "Trevor Walker",
 	"authorUrl": "https://trevorwalker.xyz",

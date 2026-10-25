@@ -2,7 +2,7 @@ import { ChronicleSettings } from "./ChronicleSettings";
 import { ValidationResult } from "obsidianx/models/SettingsValidation";
 
 
-export function settingsValidator(settings: ChronicleSettings, mode?: "movie" | "series"): ValidationResult
+export function settingsValidator(settings: ChronicleSettings, mode?: string): ValidationResult
 {
 	const errors: string[] = [];
 
@@ -34,6 +34,14 @@ export function settingsValidator(settings: ChronicleSettings, mode?: "movie" | 
 		if(settings.differentiate_miniseries && !settings.miniseries_template_path)
 		{
 			errors.push("The miniseries template path must be specified to chronicle series");
+		}
+	}
+
+	if(mode === "book")
+	{
+		if(!settings.book_template_path)
+		{
+			errors.push("The book template path must be specified to chronicle books");
 		}
 	}
 
